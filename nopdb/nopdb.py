@@ -4,7 +4,7 @@ import inspect
 import sys
 import traceback
 from types import CodeType, FrameType, ModuleType
-from typing import Any, Callable, ContextManager, Iterator, List, Optional, Dict, Tuple, Union
+from typing import Any, Callable, ContextManager, Iterable, List, Optional, Dict, Tuple, Union
 import warnings
 
 
@@ -162,7 +162,8 @@ class Nopdb:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.stop()
 
-    def add_callback(self, scope: 'Scope', callback, events=None) -> Handle:
+    def add_callback(self, scope: Scope, callback: Callable,
+                     events: Iterable[str] = None) -> Handle:
         handle = Handle()
         self._callbacks[handle] = (scope, set(events or []), callback)
         return handle
