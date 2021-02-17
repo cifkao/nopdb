@@ -216,7 +216,7 @@ class _CallCapture:
             result.stack = traceback.extract_stack(frame)
             result.return_value = None
 
-            # Extract argument values and locals
+            # Extract argument values
             arg_info = inspect.getargvalues(frame)
             result.args = collections.OrderedDict(
                 [(name, arg_info.locals[name])
