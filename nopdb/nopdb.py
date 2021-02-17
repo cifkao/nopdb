@@ -170,30 +170,30 @@ class Nopdb:
     def remove_callback(self, handle: Handle):
         del self._callbacks[handle]
 
-    @contextlib.contextmanager
     def capture_call(self,
                      function: Optional[Union[Callable, str]] = None,
                      module: Optional[ModuleType] = None,
-                     filename: Optional[str] = None) -> Iterator[CallInfo]:
-        with self._as_started():
-            scope = Scope(function, module, filename)
-            capture = _CallCapture()
-            handle = self.add_callback(scope, capture, ['call', 'return'])
-            yield capture.result
-            self.remove_callback(handle)
+                     filename: Optional[str] = None) -> ContextManager[CallInfo]:
+        return self._capture_calls(scope=Scope(function, module, filename),
+                                   capture_all=False)
 
-    @contextlib.contextmanager
     def capture_calls(self,
                       function: Optional[Union[Callable, str]] = None,
                       module: Optional[ModuleType] = None,
-                      filename: Optional[str] = None) -> Iterator[List[CallInfo]]:
-        with self._as_started():
-            scope = Scope(function, module, filename)
-            capture = _CallCapture(capture_all=True)
-            handle = self.add_callback(scope, capture, ['call', 'return'])
-            yield capture.result_list
-            self.remove_callback(handle)
+                      filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
+        return self._capture_calls(scope=Scope(function, module, filename),
+                                   capture_all=True)
 
+    @contextlib.contextmanager
+    def _capture_calls(self, *, scope: Scope, capture_all: bool):
+        with self._as_started():
+            capture = _CallCapture(capture_all=capture_all)
+            handle = self.add_callback(scope, capture, ['call', 'return'])
+            if capture_all:
+                yield capture.result_list
+            else:
+                yield capture.result
+            self.remove_callback(handle)
 
 class _CallCapture:
 
