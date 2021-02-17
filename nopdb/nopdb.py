@@ -4,7 +4,7 @@ import inspect
 import sys
 import traceback
 from types import CodeType, FrameType, ModuleType
-from typing import Any, Callable, ContextManager, Iterable, List, Optional, Dict, Tuple, Union
+from typing import Any, Callable, ContextManager, Iterable, List, Optional, Dict, Set, Tuple, Union, cast
 import warnings
 
 
@@ -104,7 +104,7 @@ class Nopdb:
     def __init__(self):
         self._started = False
         self._orig_trace_func: Optional[TraceFunc] = None
-        self._callbacks: Dict[Handle, Tuple[Scope, List[str], Callable]] \
+        self._callbacks: Dict[Handle, Tuple[Scope, Set[str], TraceFunc]] \
             = collections.OrderedDict()
 
         def trace_func(frame: FrameType, event: str, arg: Any) -> Optional[TraceFunc]:
@@ -144,7 +144,7 @@ class Nopdb:
         self._started = False
 
     @contextlib.contextmanager
-    def _as_started(self) -> None:
+    def _as_started(self):
         started = self._started
         if started and sys.gettrace() is not self._trace_func:
             raise RuntimeError('nopdb has been started, but a different trace function was '
@@ -162,7 +162,7 @@ class Nopdb:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.stop()
 
-    def add_callback(self, scope: Scope, callback: Callable,
+    def add_callback(self, scope: Scope, callback: TraceFunc,
                      events: Iterable[str] = None) -> Handle:
         handle = Handle()
         self._callbacks[handle] = (scope, set(events or []), callback)
@@ -175,15 +175,17 @@ class Nopdb:
                      function: Optional[Union[Callable, str]] = None,
                      module: Optional[ModuleType] = None,
                      filename: Optional[str] = None) -> ContextManager[CallInfo]:
-        return self._capture_calls(scope=Scope(function, module, filename),
-                                   capture_all=False)
+        return cast(ContextManager[CallInfo],
+                    self._capture_calls(scope=Scope(function, module, filename),
+                                        capture_all=False))
 
     def capture_calls(self,
                       function: Optional[Union[Callable, str]] = None,
                       module: Optional[ModuleType] = None,
                       filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
-        return self._capture_calls(scope=Scope(function, module, filename),
-                                   capture_all=True)
+        return cast(ContextManager[List[CallInfo]],
+                    self._capture_calls(scope=Scope(function, module, filename),
+                                        capture_all=True))
 
     @contextlib.contextmanager
     def _capture_calls(self, *, scope: Scope, capture_all: bool):
@@ -251,7 +253,7 @@ def capture_calls(function: Optional[Union[Callable, str]] = None,
     return _DEFAULT_NOPDB.capture_calls(function=function, module=module, filename=filename)
 
 
-def _get_code_and_self(fn: Callable) -> CodeType:
+def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
     # Bound method
     if inspect.ismethod(fn):
         return fn.__code__, fn.__self__
