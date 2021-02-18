@@ -115,22 +115,25 @@ class Breakpoint:
         self.scope = scope
         self.line = line
         self.cond = cond
-        self.eval_results = []
         self._todo_list: List[Callable[[FrameType], None]] = []
 
-    def eval(self, expression: str):
+    def eval(self, expression: str) -> list:
+        results = []
         self._todo_list.append(functools.partial(
-            self._do_eval, expression=expression))
+            self._do_eval, expression=expression, results=results))
+        return results
 
-    def exec(self, code: Union[str, CodeType]):
+    def exec(self, code: Union[str, CodeType]) -> None:
         self._todo_list.append(functools.partial(
             self._do_exec, code=code))
 
-    def _do_eval(self, frame: FrameType, expression: str) -> Any:
+    @staticmethod
+    def _do_eval(frame: FrameType, expression: str, results: list) -> Any:
         result = eval(expression, frame.f_globals, frame.f_locals)
-        self.eval_results.append(result)
+        results.append(result)
 
-    def _do_exec(self, frame: FrameType, code: Union[str, CodeType]) -> None:
+    @staticmethod
+    def _do_exec(frame: FrameType, code: Union[str, CodeType]) -> None:
         exec(code, frame.f_globals, frame.f_locals)
         _update_locals(frame)
 
