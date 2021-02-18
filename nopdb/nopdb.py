@@ -1,19 +1,23 @@
 import collections
 import contextlib
+import ctypes
+import functools
 import inspect
 import sys
 import traceback
 from types import CodeType, FrameType, ModuleType
-from typing import Any, Callable, ContextManager, Iterable, List, Optional, Dict, Set, Tuple, Union, cast
+from typing import Any, Callable, ContextManager, Iterable, Iterator, List, Optional, Dict, Set, Tuple, Union, cast
 import warnings
 
 
 __all__ = [
+    'Breakpoint',
     'CallInfo',
     'Handle',
     'Nopdb',
     'Scope',
     'TraceFunc',
+    'breakpoint',
     'capture_call',
     'capture_calls',
 ]
@@ -99,6 +103,52 @@ class Scope:
         return True
 
 
+class Breakpoint:
+
+    def __init__(self,
+                 scope: Scope,
+                 line: Optional[int] = None,
+                 cond: Optional[Union[str, CodeType]] = None):
+        if all(x is None for x in [scope.function, scope.module, scope.filename]):
+            raise TypeError("'function', 'module' or 'filename' needs to be specified")
+
+        self.scope = scope
+        self.line = line
+        self.cond = cond
+        self.eval_results = []
+        self._todo_list: List[Callable[[FrameType], None]] = []
+
+    def eval(self, expression: str):
+        self._todo_list.append(functools.partial(
+            self._do_eval, expression=expression))
+
+    def exec(self, code: Union[str, CodeType]):
+        self._todo_list.append(functools.partial(
+            self._do_exec, code=code))
+
+    def _do_eval(self, frame: FrameType, expression: str) -> Any:
+        result = eval(expression, frame.f_globals, frame.f_locals)
+        self.eval_results.append(result)
+
+    def _do_exec(self, frame: FrameType, code: Union[str, CodeType]) -> None:
+        exec(code, frame.f_globals, frame.f_locals)
+        _update_locals(frame)
+
+    def _callback(self, frame: FrameType, event: str, arg: Any):
+        # If line is None, we break at the call...
+        if self.line is None and event != 'call':
+            return
+        # ...otherwise we break at the given line
+        if self.line is not None and (event != 'line' or frame.f_lineno != self.line):
+            return
+        # Evaluate condition if given
+        if self.cond is not None and not eval(self.cond, frame.f_globals, frame.f_locals):
+            return
+
+        for action in self._todo_list:
+            action(frame)
+
+
 class Nopdb:
 
     def __init__(self):
@@ -151,9 +201,11 @@ class Nopdb:
                                'set in the meantime')
         if not started:
             self.start()
-        yield
-        if not started:
-            self.stop()
+        try:
+            yield
+        finally:
+            if not started:
+                self.stop()
 
     def __enter__(self) -> 'Nopdb':
         self.start()
@@ -172,7 +224,7 @@ class Nopdb:
         del self._callbacks[handle]
 
     def capture_call(self,
-                     function: Optional[Union[Callable, str]] = None,
+                     function: Optional[Union[Callable, str]] = None, *,
                      module: Optional[ModuleType] = None,
                      filename: Optional[str] = None) -> ContextManager[CallInfo]:
         return cast(ContextManager[CallInfo],
@@ -180,7 +232,7 @@ class Nopdb:
                                         capture_all=False))
 
     def capture_calls(self,
-                      function: Optional[Union[Callable, str]] = None,
+                      function: Optional[Union[Callable, str]] = None, *,
                       module: Optional[ModuleType] = None,
                       filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
         return cast(ContextManager[List[CallInfo]],
@@ -192,11 +244,30 @@ class Nopdb:
         with self._as_started():
             capture = _CallCapture(capture_all=capture_all)
             handle = self.add_callback(scope, capture, ['call', 'return'])
-            if capture_all:
-                yield capture.result_list
-            else:
-                yield capture.result
-            self.remove_callback(handle)
+            try:
+                if capture_all:
+                    yield capture.result_list
+                else:
+                    yield capture.result
+            finally:
+                self.remove_callback(handle)
+
+    @contextlib.contextmanager
+    def breakpoint(self, *,
+                   function: Optional[Union[Callable, str]] = None,
+                   module: Optional[ModuleType] = None,
+                   filename: Optional[str] = None,
+                   line: int,
+                   cond: Optional[Union[str, CodeType]] = None) -> Iterator[Breakpoint]:
+        with self._as_started():
+            scope = Scope(function, module, filename)
+            bp = Breakpoint(scope=scope, line=line, cond=cond)
+            handle = self.add_callback(scope, bp._callback, ['call', 'line'])
+            try:
+                yield bp
+            finally:
+                self.remove_callback(handle)
+
 
 class _CallCapture:
 
@@ -241,16 +312,25 @@ class _CallCapture:
 _DEFAULT_NOPDB = Nopdb()
 
 
-def capture_call(function: Optional[Union[Callable, str]] = None,
+def capture_call(function: Optional[Union[Callable, str]] = None, *,
                  module: Optional[ModuleType] = None,
                  filename: Optional[str] = None) -> ContextManager[CallInfo]:
     return _DEFAULT_NOPDB.capture_call(function=function, module=module, filename=filename)
 
 
-def capture_calls(function: Optional[Union[Callable, str]] = None,
+def capture_calls(function: Optional[Union[Callable, str]] = None, *,
                   module: Optional[ModuleType] = None,
                   filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
     return _DEFAULT_NOPDB.capture_calls(function=function, module=module, filename=filename)
+
+
+def breakpoint(function: Optional[Union[Callable, str]] = None, *,
+               module: Optional[ModuleType] = None,
+               filename: Optional[str] = None,
+               line: Optional[int] = None,
+               cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
+    return _DEFAULT_NOPDB.breakpoint(
+        function=function, module=module, filename=filename, line=line, cond=cond)
 
 
 def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
@@ -267,3 +347,7 @@ def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
         return fn.__class__.__call__.__code__, fn
     raise TypeError('Could not find the code for {!r}. '
                     'Please provide a pure Python callable'.format(fn))
+
+
+def _update_locals(frame: FrameType):
+    ctypes.pythonapi.PyFrame_LocalsToFast(ctypes.py_object(frame), ctypes.c_int(1))
