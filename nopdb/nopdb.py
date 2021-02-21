@@ -111,9 +111,6 @@ class Breakpoint:
                  scope: Scope,
                  line: Optional[int] = None,
                  cond: Optional[Union[str, CodeType]] = None):
-        if all(x is None for x in [scope.function, scope.module, scope.filename]):
-            raise TypeError("'function', 'module' or 'filename' needs to be specified")
-
         self.scope = scope
         self.line = line
         self.cond = cond
