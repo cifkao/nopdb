@@ -4,6 +4,7 @@ import ctypes
 import functools
 import inspect
 import sys
+import threading
 import traceback
 from types import CodeType, FrameType, ModuleType
 from typing import Any, Callable, ContextManager, Iterable, Iterator, List, Optional, Dict, Set, Tuple, Union, cast
@@ -20,6 +21,7 @@ __all__ = [
     'breakpoint',
     'capture_call',
     'capture_calls',
+    'get_nopdb'
 ]
 
 
@@ -331,19 +333,24 @@ class _CallCapture:
                 self.result.__dict__.update(result.__dict__)
 
 
-_DEFAULT_NOPDB = Nopdb()
+_THREAD_LOCAL = threading.local()
+_THREAD_LOCAL.default_nopdb = Nopdb()
+
+
+def get_nopdb() -> Nopdb:
+    return _THREAD_LOCAL.default_nopdb
 
 
 def capture_call(function: Optional[Union[Callable, str]] = None, *,
                  module: Optional[ModuleType] = None,
                  filename: Optional[str] = None) -> ContextManager[CallInfo]:
-    return _DEFAULT_NOPDB.capture_call(function=function, module=module, filename=filename)
+    return get_nopdb().capture_call(function=function, module=module, filename=filename)
 
 
 def capture_calls(function: Optional[Union[Callable, str]] = None, *,
                   module: Optional[ModuleType] = None,
                   filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
-    return _DEFAULT_NOPDB.capture_calls(function=function, module=module, filename=filename)
+    return get_nopdb().capture_calls(function=function, module=module, filename=filename)
 
 
 def breakpoint(function: Optional[Union[Callable, str]] = None, *,
@@ -351,7 +358,7 @@ def breakpoint(function: Optional[Union[Callable, str]] = None, *,
                filename: Optional[str] = None,
                line: Optional[int] = None,
                cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
-    return _DEFAULT_NOPDB.breakpoint(
+    return get_nopdb().breakpoint(
         function=function, module=module, filename=filename, line=line, cond=cond)
 
 
