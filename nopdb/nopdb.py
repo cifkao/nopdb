@@ -182,14 +182,20 @@ class Nopdb:
             = collections.OrderedDict()
 
         def trace_func(frame: FrameType, event: str, arg: Any) -> Optional[TraceFunc]:
-            match = False
+            trace_locally = False
+
+            # Check which callbacks we need to call
             for scope, events, callback in self._callbacks.values():
                 if scope.match_frame(frame):
-                    match = True
+                    # If an event other than 'call' is requested, we will need to return a local
+                    # trace function.
+                    if event == 'call' and not all(e == 'call' for e in events):
+                        trace_locally = True
+
                     if event in events:
                         callback(frame, event, arg)
 
-            if match:
+            if trace_locally:
                 return trace_func
 
         self._trace_func = trace_func
