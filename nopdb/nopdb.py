@@ -117,24 +117,43 @@ class Breakpoint:
         self.cond = cond
         self._todo_list: List[Callable[[FrameType], None]] = []
 
-    def eval(self, expression: str) -> list:
+    def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> list:
         results = []
         self._todo_list.append(functools.partial(
-            self._do_eval, expression=expression, results=results))
+            self._do_eval, expression=expression, variables=variables, results=results))
         return results
 
-    def exec(self, code: Union[str, CodeType]) -> None:
+    def exec(self, code: Union[str, CodeType], variables: Optional[Dict[str, Any]] = None) -> None:
         self._todo_list.append(functools.partial(
-            self._do_exec, code=code))
+            self._do_exec, code=code, variables=variables))
 
     @staticmethod
-    def _do_eval(frame: FrameType, expression: str, results: list) -> Any:
-        result = eval(expression, frame.f_globals, frame.f_locals)
+    def _do_eval(frame: FrameType, expression: str, results: list,
+                 variables: Optional[Dict[str, Any]]) -> Any:
+        f_locals = {**frame.f_locals, **(variables or {})}
+        result = eval(expression, dict(frame.f_globals), f_locals)
         results.append(result)
 
     @staticmethod
-    def _do_exec(frame: FrameType, code: Union[str, CodeType]) -> None:
-        exec(code, frame.f_globals, frame.f_locals)
+    def _do_exec(frame: FrameType, code: Union[str, CodeType],
+                 variables: Optional[Dict[str, Any]]) -> None:
+        if variables is None:
+            variables = {}
+        conflict_vars = frame.f_locals.keys() & variables.keys()
+        if conflict_vars:
+            raise RuntimeError("The following external variables conflict with local ones: {}"
+                               .format(repr(conflict_vars).lstrip('{').rstrip('}')))
+
+        # Run the code with the external variables added, then remove them again
+        f_locals = {**frame.f_locals, **variables}
+        exec(code, frame.f_globals, f_locals)
+        for name in list(f_locals.keys() & variables.keys()):
+            del f_locals[name]
+
+        # Update the frame
+        for name in list(frame.f_locals.keys() - f_locals.keys()):
+            del frame.f_locals[name]
+        frame.f_locals.update(f_locals)
         _update_locals(frame)
 
     def _callback(self, frame: FrameType, event: str, arg: Any):
