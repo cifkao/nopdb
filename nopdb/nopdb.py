@@ -62,10 +62,12 @@ class Scope:
                  function: Optional[Union[Callable, str]] = None,
                  module: Optional[ModuleType] = None,
                  filename: Optional[str] = None,
+                 obj: Optional[Any] = None,
                  parent_scopes: 'Optional[List[Scope]]' = None):
         self.function = function
         self.module = module
         self.filename = filename
+        self.obj = obj
         self.parent_scopes = list(parent_scopes) if parent_scopes else []
 
         self._fn_name, self._fn_code, self._fn_self = None, None, None
@@ -73,6 +75,9 @@ class Scope:
             self._fn_name = function
         elif function is not None:
             self._fn_code, self._fn_self = _get_code_and_self(function)
+
+        if obj is not None:
+            self._fn_self = obj
 
     def match_frame(self, frame: FrameType) -> bool:
         if self._fn_code is not None:
@@ -253,17 +258,19 @@ class Nopdb:
     def capture_call(self,
                      function: Optional[Union[Callable, str]] = None, *,
                      module: Optional[ModuleType] = None,
-                     filename: Optional[str] = None) -> ContextManager[CallInfo]:
+                     filename: Optional[str] = None,
+                     obj: Optional[Any] = None) -> ContextManager[CallInfo]:
         return cast(ContextManager[CallInfo],
-                    self._capture_calls(scope=Scope(function, module, filename),
+                    self._capture_calls(scope=Scope(function, module, filename, obj),
                                         capture_all=False))
 
     def capture_calls(self,
                       function: Optional[Union[Callable, str]] = None, *,
                       module: Optional[ModuleType] = None,
-                      filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
+                      filename: Optional[str] = None,
+                      obj: Optional[Any] = None) -> ContextManager[List[CallInfo]]:
         return cast(ContextManager[List[CallInfo]],
-                    self._capture_calls(scope=Scope(function, module, filename),
+                    self._capture_calls(scope=Scope(function, module, filename, obj),
                                         capture_all=True))
 
     @contextlib.contextmanager
@@ -346,14 +353,16 @@ def get_nopdb() -> Nopdb:
 
 def capture_call(function: Optional[Union[Callable, str]] = None, *,
                  module: Optional[ModuleType] = None,
-                 filename: Optional[str] = None) -> ContextManager[CallInfo]:
-    return get_nopdb().capture_call(function=function, module=module, filename=filename)
+                 filename: Optional[str] = None,
+                 obj: Optional[Any] = None) -> ContextManager[CallInfo]:
+    return get_nopdb().capture_call(function=function, module=module, filename=filename, obj=obj)
 
 
 def capture_calls(function: Optional[Union[Callable, str]] = None, *,
                   module: Optional[ModuleType] = None,
-                  filename: Optional[str] = None) -> ContextManager[List[CallInfo]]:
-    return get_nopdb().capture_calls(function=function, module=module, filename=filename)
+                  filename: Optional[str] = None,
+                  obj: Optional[Any] = None) -> ContextManager[List[CallInfo]]:
+    return get_nopdb().capture_calls(function=function, module=module, filename=filename, obj=obj)
 
 
 def breakpoint(function: Optional[Union[Callable, str]] = None, *,
