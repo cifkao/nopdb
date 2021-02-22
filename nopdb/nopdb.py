@@ -344,10 +344,11 @@ class _CallCapture:
 
 
 _THREAD_LOCAL = threading.local()
-_THREAD_LOCAL.default_nopdb = Nopdb()
 
 
 def get_nopdb() -> Nopdb:
+    if not hasattr(_THREAD_LOCAL, 'default_nopdb'):
+        _THREAD_LOCAL.default_nopdb = Nopdb()
     return _THREAD_LOCAL.default_nopdb
 
 
