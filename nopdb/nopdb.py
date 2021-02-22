@@ -351,27 +351,19 @@ def get_nopdb() -> Nopdb:
     return _THREAD_LOCAL.default_nopdb
 
 
-def capture_call(function: Optional[Union[Callable, str]] = None, *,
-                 module: Optional[ModuleType] = None,
-                 filename: Optional[str] = None,
-                 obj: Optional[Any] = None) -> ContextManager[CallInfo]:
-    return get_nopdb().capture_call(function=function, module=module, filename=filename, obj=obj)
+@functools.wraps(get_nopdb().capture_call)
+def capture_call(*args, **kwargs):
+    return get_nopdb().capture_call(*args, **kwargs)
 
 
-def capture_calls(function: Optional[Union[Callable, str]] = None, *,
-                  module: Optional[ModuleType] = None,
-                  filename: Optional[str] = None,
-                  obj: Optional[Any] = None) -> ContextManager[List[CallInfo]]:
-    return get_nopdb().capture_calls(function=function, module=module, filename=filename, obj=obj)
+@functools.wraps(get_nopdb().capture_calls)
+def capture_calls(*args, **kwargs):
+    return get_nopdb().capture_calls(*args, **kwargs)
 
 
-def breakpoint(function: Optional[Union[Callable, str]] = None, *,
-               module: Optional[ModuleType] = None,
-               filename: Optional[str] = None,
-               line: Optional[int] = None,
-               cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
-    return get_nopdb().breakpoint(
-        function=function, module=module, filename=filename, line=line, cond=cond)
+@functools.wraps(get_nopdb().breakpoint)
+def breakpoint(*args, **kwargs):
+    return get_nopdb().breakpoint(*args, **kwargs)
 
 
 def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
