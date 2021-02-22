@@ -286,13 +286,13 @@ class Nopdb:
             finally:
                 self.remove_callback(handle)
 
-    @contextlib.contextmanager
+    @contextlib.contextmanager  # type: ignore
     def breakpoint(self, *,
                    function: Optional[Union[Callable, str]] = None,
                    module: Optional[ModuleType] = None,
                    filename: Optional[str] = None,
                    line: int,
-                   cond: Optional[Union[str, CodeType]] = None) -> Iterator[Breakpoint]:
+                   cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
         with self._as_started():
             scope = Scope(function, module, filename)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
