@@ -291,7 +291,7 @@ class Nopdb:
                    function: Optional[Union[Callable, str]] = None,
                    module: Optional[ModuleType] = None,
                    filename: Optional[str] = None,
-                   line: int,
+                   line: Optional[int] = None,
                    cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
         with self._as_started():
             scope = Scope(function, module, filename)
