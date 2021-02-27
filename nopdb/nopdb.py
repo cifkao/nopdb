@@ -1,14 +1,19 @@
+import bdb
 import collections
 import contextlib
 import ctypes
 import functools
 import inspect
+import pdb
 import sys
 import threading
 import traceback
-from types import CodeType, FrameType, ModuleType
-from typing import Any, Callable, ContextManager, Iterable, Iterator, List, Optional, Dict, Set, Tuple, Union, cast
+from types import CodeType, FrameType, ModuleType, TracebackType
+from typing import Any, Callable, ContextManager, Iterable, Iterator, List, Optional, Dict, Set, Tuple, Type, Union, cast
 import warnings
+
+from .common import TraceFunc
+from .nice_debugger import get_nice_debugger
 
 
 __all__ = [
@@ -17,15 +22,11 @@ __all__ = [
     'Handle',
     'Nopdb',
     'Scope',
-    'TraceFunc',
     'breakpoint',
     'capture_call',
     'capture_calls',
     'get_nopdb'
 ]
-
-
-TraceFunc = Callable[[FrameType, str, Any], Any]
 
 
 class Handle:
@@ -119,7 +120,7 @@ class Breakpoint:
         self.scope = scope
         self.line = line
         self.cond = cond
-        self._todo_list: List[Callable[[FrameType], None]] = []
+        self._todo_list: List[Callable[[FrameType, str, Any], None]] = []
 
     def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> list:
         results = []
@@ -131,15 +132,21 @@ class Breakpoint:
         self._todo_list.append(functools.partial(
             self._do_exec, code=code, variables=variables))
 
+    def debug(self, debugger_cls: Type[bdb.Bdb] = pdb.Pdb, **kwargs):
+        self._todo_list.append(functools.partial(
+            self._do_debug, debugger_cls=debugger_cls, kwargs=kwargs))
+
     @staticmethod
-    def _do_eval(frame: FrameType, expression: str, results: list,
+    def _do_eval(frame: FrameType, event: str, arg: Any,
+                 expression: str, results: list,
                  variables: Optional[Dict[str, Any]]) -> Any:
         f_locals = {**frame.f_locals, **(variables or {})}
         result = eval(expression, dict(frame.f_globals), f_locals)
         results.append(result)
 
     @staticmethod
-    def _do_exec(frame: FrameType, code: Union[str, CodeType],
+    def _do_exec(frame: FrameType, event: str, arg: Any,
+                 code: Union[str, CodeType],
                  variables: Optional[Dict[str, Any]]) -> None:
         if variables is None:
             variables = {}
@@ -160,19 +167,27 @@ class Breakpoint:
         frame.f_locals.update(f_locals)
         _update_locals(frame)
 
+    @staticmethod
+    def _do_debug(frame: FrameType, event: str, arg: Any,
+                  debugger_cls: Type[bdb.Bdb], kwargs: dict):
+        debugger = get_nice_debugger(debugger_cls, frame, kwargs)
+        sys.settrace(None)
+        debugger.set_trace(frame=frame)
+        debugger.trace_dispatch(frame, event, arg)
+
     def _callback(self, frame: FrameType, event: str, arg: Any):
-        # If line is None, we break at the call...
-        if self.line is None and event != 'call':
+        # If line is None, we break at the first line...
+        if self.line is None and frame.f_lineno != frame.f_code.co_firstlineno:
             return
         # ...otherwise we break at the given line
-        if self.line is not None and (event != 'line' or frame.f_lineno != self.line):
+        if self.line is not None and frame.f_lineno != self.line:
             return
         # Evaluate condition if given
         if self.cond is not None and not eval(self.cond, frame.f_globals, frame.f_locals):
             return
 
         for action in self._todo_list:
-            action(frame)
+            action(frame, event, arg)
 
 
 class Nopdb:
@@ -184,6 +199,10 @@ class Nopdb:
             = collections.OrderedDict()
 
         def trace_func(frame: FrameType, event: str, arg: Any) -> Optional[TraceFunc]:
+            # Do not do anything if this instance is not currently tracing
+            if sys.gettrace() is not trace_func:
+                return None
+
             trace_locally = False
 
             # Check which callbacks we need to call
