@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 from .common import TraceFunc
 
 
-def get_nice_debugger(cls: Type[bdb.Bdb], frame: FrameType, kwargs: dict):
+def get_nice_debugger(frame: FrameType, cls: Type[bdb.Bdb], kwargs: dict):
 
     class NiceDebugger(cls):
 

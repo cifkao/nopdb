@@ -170,7 +170,7 @@ class Breakpoint:
     @staticmethod
     def _do_debug(frame: FrameType, event: str, arg: Any,
                   debugger_cls: Type[bdb.Bdb], kwargs: dict):
-        debugger = get_nice_debugger(debugger_cls, frame, kwargs)
+        debugger = get_nice_debugger(frame, debugger_cls, kwargs)
         sys.settrace(None)
         debugger.set_trace(frame=frame)
         debugger.trace_dispatch(frame, event, arg)
