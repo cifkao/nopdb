@@ -4,6 +4,8 @@ import contextlib
 import ctypes
 import functools
 import inspect
+from os import PathLike
+import pathlib
 import pdb
 import sys
 import threading
@@ -37,7 +39,7 @@ class CallInfo:
 
     def __init__(self):
         self.name: Optional[str] = None
-        self.filename: Optional[str] = None
+        self.file: Optional[str] = None
         self.stack: Optional[traceback.StackSummary] = None
         self.args: Optional[dict] = None
         self.locals: Optional[dict] = None
@@ -62,11 +64,10 @@ class Scope:
     def __init__(self,
                  function: Optional[Union[Callable, str]] = None,
                  module: Optional[ModuleType] = None,
-                 filename: Optional[str] = None,
+                 file: Optional[Union[str, PathLike]] = None,
                  obj: Optional[Any] = None):
         self.function = function
         self.module = module
-        self.filename = filename
         self.obj = obj
 
         self._fn_name, self._fn_code, self._fn_self = None, None, None
@@ -77,6 +78,11 @@ class Scope:
 
         if obj is not None:
             self._fn_self = obj
+
+        if isinstance(file, PathLike):
+            self.file = pathlib.Path(file).resolve()
+        else:
+            self.file = file
 
     def match_frame(self, frame: FrameType) -> bool:
         if self._fn_code is not None:
@@ -98,9 +104,16 @@ class Scope:
             if frame.f_code.co_filename != self.module.__file__:
                 return False
 
-        if self.filename is not None:
-            # TODO: Support relative paths
-            if frame.f_code.co_filename != self.filename:
+        if self.file is not None:
+            file = frame.f_code.co_filename
+            if file.endswith('>'):
+                # Special filename: exact match
+                if file != self.file:
+                    return False
+            elif isinstance(self.file, pathlib.Path):
+                if pathlib.Path(file).resolve() != self.file:
+                    return False
+            elif not pathlib.Path(file).resolve().match(self.file):
                 return False
 
         return True
@@ -275,19 +288,19 @@ class Nopdb:
     def capture_call(self,
                      function: Optional[Union[Callable, str]] = None, *,
                      module: Optional[ModuleType] = None,
-                     filename: Optional[str] = None,
+                     file: Optional[Union[str, PathLike]] = None,
                      obj: Optional[Any] = None) -> ContextManager[CallInfo]:
         return cast(ContextManager[CallInfo],
-                    self._capture_calls(scope=Scope(function, module, filename, obj),
+                    self._capture_calls(scope=Scope(function, module, file, obj),
                                         capture_all=False))
 
     def capture_calls(self,
                       function: Optional[Union[Callable, str]] = None, *,
                       module: Optional[ModuleType] = None,
-                      filename: Optional[str] = None,
+                      file: Optional[Union[str, PathLike]] = None,
                       obj: Optional[Any] = None) -> ContextManager[List[CallInfo]]:
         return cast(ContextManager[List[CallInfo]],
-                    self._capture_calls(scope=Scope(function, module, filename, obj),
+                    self._capture_calls(scope=Scope(function, module, file, obj),
                                         capture_all=True))
 
     @contextlib.contextmanager
@@ -307,11 +320,11 @@ class Nopdb:
     def breakpoint(self, *,
                    function: Optional[Union[Callable, str]] = None,
                    module: Optional[ModuleType] = None,
-                   filename: Optional[str] = None,
+                   file: Optional[Union[str, PathLike]] = None,
                    line: Optional[int] = None,
                    cond: Optional[Union[str, CodeType]] = None) -> ContextManager[Breakpoint]:
         with self._as_started():
-            scope = Scope(function, module, filename)
+            scope = Scope(function, module, file)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
             handle = self.add_callback(scope, bp._callback, ['call', 'line'])
             try:
@@ -337,7 +350,7 @@ class _CallCapture:
 
         if event == 'call':
             result.name = frame.f_code.co_name
-            result.filename = frame.f_code.co_filename
+            result.file = frame.f_code.co_filename
             result.stack = traceback.extract_stack(frame)
             result.return_value = None
 
