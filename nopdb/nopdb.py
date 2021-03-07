@@ -63,13 +63,11 @@ class Scope:
                  function: Optional[Union[Callable, str]] = None,
                  module: Optional[ModuleType] = None,
                  filename: Optional[str] = None,
-                 obj: Optional[Any] = None,
-                 parent_scopes: 'Optional[List[Scope]]' = None):
+                 obj: Optional[Any] = None):
         self.function = function
         self.module = module
         self.filename = filename
         self.obj = obj
-        self.parent_scopes = list(parent_scopes) if parent_scopes else []
 
         self._fn_name, self._fn_code, self._fn_self = None, None, None
         if isinstance(function, str):
@@ -105,9 +103,6 @@ class Scope:
             if frame.f_code.co_filename != self.filename:
                 return False
 
-        for scope in self.parent_scopes:
-            raise NotImplementedError()
-
         return True
 
 
@@ -117,6 +112,9 @@ class Breakpoint:
                  scope: Scope,
                  line: Optional[int] = None,
                  cond: Optional[Union[str, CodeType]] = None):
+        if line is None and scope.function is None:
+            raise RuntimeError('line number must be given if no function is specified')
+
         self.scope = scope
         self.line = line
         self.cond = cond
