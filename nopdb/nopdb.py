@@ -1,29 +1,22 @@
-import bdb
 import collections
 import contextlib
-import ctypes
 import functools
-import inspect
 from os import PathLike
-import pathlib
-import pdb
 import sys
 import threading
-import traceback
-from types import CodeType, FrameType, ModuleType, TracebackType
-from typing import Any, Callable, ContextManager, Iterable, Iterator, List, Optional, Dict, Set, Tuple, Type, Union, cast
+from types import CodeType, FrameType, ModuleType
+from typing import Any, Callable, ContextManager, Iterable, List, Optional, Dict, Set, Tuple, Union, cast
 import warnings
 
+from .call_info import CallCapture, CallInfo
 from .common import TraceFunc
-from .nice_debugger import get_nice_debugger
+from .scope import Scope
+from .breakpoint import Breakpoint
 
 
 __all__ = [
-    'Breakpoint',
-    'CallInfo',
     'Handle',
     'Nopdb',
-    'Scope',
     'breakpoint',
     'capture_call',
     'capture_calls',
@@ -33,172 +26,6 @@ __all__ = [
 
 class Handle:
     pass
-
-
-class CallInfo:
-
-    def __init__(self):
-        self.name: Optional[str] = None
-        self.file: Optional[str] = None
-        self.stack: Optional[traceback.StackSummary] = None
-        self.args: Optional[dict] = None
-        self.locals: Optional[dict] = None
-        self.globals: Optional[dict] = None
-        self.return_value: Optional[Any] = None
-
-    def __repr__(self) -> str:
-        return '{}(name={!r}, args={}({}), return_value={!r})'.format(
-            type(self).__name__, self.name,
-            type(self.args).__name__,
-            ', '.join('{}={!r}'.format(k, v) for k, v in self.args.items()),
-            self.return_value,
-        )
-
-    def print_stack(self, file = None) -> None:
-        for line in self.stack.format():
-            print(line, end='', file=file)
-
-
-class Scope:
-
-    def __init__(self,
-                 function: Optional[Union[Callable, str]] = None,
-                 module: Optional[ModuleType] = None,
-                 file: Optional[Union[str, PathLike]] = None,
-                 obj: Optional[Any] = None):
-        self.function = function
-        self.module = module
-        self.obj = obj
-
-        self._fn_name, self._fn_code, self._fn_self = None, None, None
-        if isinstance(function, str):
-            self._fn_name = function
-        elif function is not None:
-            self._fn_code, self._fn_self = _get_code_and_self(function)
-
-        if obj is not None:
-            self._fn_self = obj
-
-        if isinstance(file, PathLike):
-            self.file = pathlib.Path(file).resolve()
-        else:
-            self.file = file
-
-    def match_frame(self, frame: FrameType) -> bool:
-        if self._fn_code is not None:
-            if frame.f_code is not self._fn_code:
-                return False
-            if self._fn_self is not None:
-                # The function is a method; check if `self` is the correct object
-                arg_info = inspect.getargvalues(frame)
-                if len(arg_info.args) == 0:  # Just in case this somehow happens
-                    return False
-                if arg_info.locals[arg_info.args[0]] is not self._fn_self:
-                    return False
-
-        if self._fn_name is not None:
-            if frame.f_code.co_name != self._fn_name:
-                return False
-
-        if self.module is not None:
-            if frame.f_code.co_filename != self.module.__file__:
-                return False
-
-        if self.file is not None:
-            file = frame.f_code.co_filename
-            if file.endswith('>'):
-                # Special filename: exact match
-                if file != self.file:
-                    return False
-            elif isinstance(self.file, pathlib.Path):
-                if pathlib.Path(file).resolve() != self.file:
-                    return False
-            elif not pathlib.Path(file).resolve().match(self.file):
-                return False
-
-        return True
-
-
-class Breakpoint:
-
-    def __init__(self,
-                 scope: Scope,
-                 line: Optional[int] = None,
-                 cond: Optional[Union[str, CodeType]] = None):
-        if line is None and scope.function is None:
-            raise RuntimeError('line number must be given if no function is specified')
-
-        self.scope = scope
-        self.line = line
-        self.cond = cond
-        self._todo_list: List[Callable[[FrameType, str, Any], None]] = []
-
-    def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> list:
-        results = []
-        self._todo_list.append(functools.partial(
-            self._do_eval, expression=expression, variables=variables, results=results))
-        return results
-
-    def exec(self, code: Union[str, CodeType], variables: Optional[Dict[str, Any]] = None) -> None:
-        self._todo_list.append(functools.partial(
-            self._do_exec, code=code, variables=variables))
-
-    def debug(self, debugger_cls: Type[bdb.Bdb] = pdb.Pdb, **kwargs):
-        self._todo_list.append(functools.partial(
-            self._do_debug, debugger_cls=debugger_cls, kwargs=kwargs))
-
-    @staticmethod
-    def _do_eval(frame: FrameType, event: str, arg: Any,
-                 expression: str, results: list,
-                 variables: Optional[Dict[str, Any]]) -> Any:
-        f_locals = {**frame.f_locals, **(variables or {})}
-        result = eval(expression, dict(frame.f_globals), f_locals)
-        results.append(result)
-
-    @staticmethod
-    def _do_exec(frame: FrameType, event: str, arg: Any,
-                 code: Union[str, CodeType],
-                 variables: Optional[Dict[str, Any]]) -> None:
-        if variables is None:
-            variables = {}
-        conflict_vars = frame.f_locals.keys() & variables.keys()
-        if conflict_vars:
-            raise RuntimeError("The following external variables conflict with local ones: {}"
-                               .format(repr(conflict_vars).lstrip('{').rstrip('}')))
-
-        # Run the code with the external variables added, then remove them again
-        f_locals = {**frame.f_locals, **variables}
-        exec(code, frame.f_globals, f_locals)
-        for name in list(f_locals.keys() & variables.keys()):
-            del f_locals[name]
-
-        # Update the frame
-        for name in list(frame.f_locals.keys() - f_locals.keys()):
-            del frame.f_locals[name]
-        frame.f_locals.update(f_locals)
-        _update_locals(frame)
-
-    @staticmethod
-    def _do_debug(frame: FrameType, event: str, arg: Any,
-                  debugger_cls: Type[bdb.Bdb], kwargs: dict):
-        debugger = get_nice_debugger(frame, debugger_cls, kwargs)
-        sys.settrace(None)
-        debugger.set_trace(frame=frame)
-        debugger.trace_dispatch(frame, event, arg)
-
-    def _callback(self, frame: FrameType, event: str, arg: Any):
-        # If line is None, we break at the first line...
-        if self.line is None and frame.f_lineno != frame.f_code.co_firstlineno:
-            return
-        # ...otherwise we break at the given line
-        if self.line is not None and frame.f_lineno != self.line:
-            return
-        # Evaluate condition if given
-        if self.cond is not None and not eval(self.cond, frame.f_globals, frame.f_locals):
-            return
-
-        for action in self._todo_list:
-            action(frame, event, arg)
 
 
 class Nopdb:
@@ -306,7 +133,7 @@ class Nopdb:
     @contextlib.contextmanager
     def _capture_calls(self, *, scope: Scope, capture_all: bool):
         with self._as_started():
-            capture = _CallCapture(capture_all=capture_all)
+            capture = CallCapture(capture_all=capture_all)
             handle = self.add_callback(scope, capture, ['call', 'return'])
             try:
                 if capture_all:
@@ -333,46 +160,6 @@ class Nopdb:
                 self.remove_callback(handle)
 
 
-class _CallCapture:
-
-    def __init__(self, capture_all=False):
-        self.capture_all = capture_all
-        if capture_all:
-            self.result_list = []
-        else:
-            self.result = CallInfo()
-        self._result_by_frame: Dict[FrameType, CallInfo] = {}
-
-    def __call__(self, frame: FrameType, event: str, arg: Any):
-        if frame not in self._result_by_frame:
-            self._result_by_frame[frame] = CallInfo()
-        result = self._result_by_frame[frame]
-
-        if event == 'call':
-            result.name = frame.f_code.co_name
-            result.file = frame.f_code.co_filename
-            result.stack = traceback.extract_stack(frame)
-            result.return_value = None
-
-            # Extract argument values
-            arg_info = inspect.getargvalues(frame)
-            result.args = collections.OrderedDict(
-                [(name, arg_info.locals[name])
-                for name in arg_info.args
-                if name in arg_info.locals])
-        elif event == 'return':
-            result.locals = frame.f_locals
-            result.globals = frame.f_globals
-            result.return_value = arg
-
-            # This frame is done, save the result
-            del self._result_by_frame[frame]
-            if self.capture_all:
-                self.result_list.append(result)
-            else:
-                self.result.__dict__.update(result.__dict__)
-
-
 _THREAD_LOCAL = threading.local()
 
 
@@ -395,23 +182,3 @@ def capture_calls(*args, **kwargs):
 @functools.wraps(get_nopdb().breakpoint)
 def breakpoint(*args, **kwargs):
     return get_nopdb().breakpoint(*args, **kwargs)
-
-
-def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
-    # Bound method
-    if inspect.ismethod(fn):
-        return fn.__code__, fn.__self__
-    # Regular function
-    if inspect.isfunction(fn):
-        return fn.__code__, None
-    # Instance of a class that defines a __call__ method
-    if (hasattr(fn, '__class__')
-            and hasattr(fn.__class__, '__call__')
-            and inspect.isfunction(fn.__class__.__call__)):
-        return fn.__class__.__call__.__code__, fn
-    raise TypeError('Could not find the code for {!r}. '
-                    'Please provide a pure Python callable'.format(fn))
-
-
-def _update_locals(frame: FrameType):
-    ctypes.pythonapi.PyFrame_LocalsToFast(ctypes.py_object(frame), ctypes.c_int(1))
