@@ -1,6 +1,6 @@
 import setuptools
 
 setuptools.setup(
-    name='nopdb',
+    name="nopdb",
     packages=setuptools.find_packages(),
 )
