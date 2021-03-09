@@ -6,7 +6,6 @@ from typing import Any, Optional, Dict
 
 
 class CallInfo:
-
     def __init__(self):
         self.name: Optional[str] = None
         self.file: Optional[str] = None
@@ -17,21 +16,21 @@ class CallInfo:
         self.return_value: Optional[Any] = None
 
     def __repr__(self) -> str:
-        return '{}(name={!r}, args={}({}), return_value={!r})'.format(
-            type(self).__name__, self.name,
+        return "{}(name={!r}, args={}({}), return_value={!r})".format(
+            type(self).__name__,
+            self.name,
             type(self.args).__name__,
-            ', '.join('{}={!r}'.format(k, v) for k, v in (self.args or {}).items()),
+            ", ".join("{}={!r}".format(k, v) for k, v in (self.args or {}).items()),
             self.return_value,
         )
 
-    def print_stack(self, file = None) -> None:
+    def print_stack(self, file=None) -> None:
         if self.stack is not None:
             for line in self.stack.format():
-                print(line, end='', file=file)
+                print(line, end="", file=file)
 
 
 class CallCapture:
-
     def __init__(self, capture_all=False):
         self.capture_all = capture_all
         if capture_all:
@@ -45,7 +44,7 @@ class CallCapture:
             self._result_by_frame[frame] = CallInfo()
         result = self._result_by_frame[frame]
 
-        if event == 'call':
+        if event == "call":
             result.name = frame.f_code.co_name
             result.file = frame.f_code.co_filename
             result.stack = traceback.extract_stack(frame)
@@ -54,10 +53,13 @@ class CallCapture:
             # Extract argument values
             arg_info = inspect.getargvalues(frame)
             result.args = collections.OrderedDict(
-                [(name, arg_info.locals[name])
-                for name in arg_info.args
-                if name in arg_info.locals])
-        elif event == 'return':
+                [
+                    (name, arg_info.locals[name])
+                    for name in arg_info.args
+                    if name in arg_info.locals
+                ]
+            )
+        elif event == "return":
             result.locals = frame.f_locals
             result.globals = frame.f_globals
             result.return_value = arg

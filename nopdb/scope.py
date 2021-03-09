@@ -6,12 +6,13 @@ from typing import Any, Callable, Optional, Tuple, Union
 
 
 class Scope:
-
-    def __init__(self,
-                 function: Optional[Union[Callable, str]] = None,
-                 module: Optional[ModuleType] = None,
-                 file: Optional[Union[str, PathLike]] = None,
-                 obj: Optional[Any] = None):
+    def __init__(
+        self,
+        function: Optional[Union[Callable, str]] = None,
+        module: Optional[ModuleType] = None,
+        file: Optional[Union[str, PathLike]] = None,
+        obj: Optional[Any] = None,
+    ):
         self.function = function
         self.module = module
         self.obj = obj
@@ -53,7 +54,7 @@ class Scope:
 
         if self.file is not None:
             file = frame.f_code.co_filename
-            if file.endswith('>'):
+            if file.endswith(">"):
                 # Special filename: exact match
                 if file != self.file:
                     return False
@@ -75,9 +76,13 @@ def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
     if inspect.isfunction(fn):
         return fn.__code__, None
     # Instance of a class that defines a __call__ method
-    if (hasattr(fn, '__class__')
-            and hasattr(fn.__class__, '__call__')
-            and inspect.isfunction(fn.__class__.__call__)):
+    if (
+        hasattr(fn, "__class__")
+        and hasattr(fn.__class__, "__call__")
+        and inspect.isfunction(fn.__class__.__call__)
+    ):
         return fn.__class__.__call__.__code__, fn
-    raise TypeError('Could not find the code for {!r}. '
-                    'Please provide a pure Python callable'.format(fn))
+    raise TypeError(
+        "Could not find the code for {!r}. "
+        "Please provide a pure Python callable".format(fn)
+    )

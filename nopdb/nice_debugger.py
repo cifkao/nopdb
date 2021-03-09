@@ -7,9 +7,7 @@ from .common import TraceFunc
 
 
 def get_nice_debugger(frame: FrameType, cls: Type[bdb.Bdb], kwargs: dict):
-
     class NiceDebugger(cls):  # type: ignore
-
         def __init__(self, frame: FrameType, kwargs: dict):
             self._orig_trace_func = sys.gettrace()
             self._orig_local_trace_funcs = _get_local_trace_funcs(frame)
@@ -40,11 +38,12 @@ def get_nice_debugger(frame: FrameType, cls: Type[bdb.Bdb], kwargs: dict):
 
 
 def _get_local_trace_funcs(
-    frame: FrameType
+    frame: FrameType,
 ) -> Dict[int, Tuple[FrameType, Optional[TraceFunc]]]:
     trace_funcs = {}
     while True:
-        # Store a reference to the frame to prevent its ID from being reused by another frame
+        # Store a reference to the frame to prevent its ID from being reused by another
+        # frame
         trace_funcs[id(frame)] = (frame, frame.f_trace)
         if not frame.f_back:
             break
