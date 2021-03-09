@@ -1,7 +1,7 @@
 import inspect
 from os import PathLike
 import pathlib
-from types import CodeType, FrameType, ModuleType
+from types import CodeType, FrameType, ModuleType, MethodType
 from typing import Any, Callable, Optional, Tuple, Union
 
 
@@ -25,6 +25,7 @@ class Scope:
         if obj is not None:
             self._fn_self = obj
 
+        self.file: Optional[Union[str, pathlib.Path]] = None
         if isinstance(file, PathLike):
             self.file = pathlib.Path(file).resolve()
         else:
@@ -68,7 +69,8 @@ class Scope:
 def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
     # Bound method
     if inspect.ismethod(fn):
-        return fn.__code__, fn.__self__
+        assert isinstance(fn, MethodType)
+        return fn.__func__.__code__, fn.__self__
     # Regular function
     if inspect.isfunction(fn):
         return fn.__code__, None

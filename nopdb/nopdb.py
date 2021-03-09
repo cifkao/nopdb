@@ -57,6 +57,8 @@ class Nopdb:
             if trace_locally:
                 return trace_func
 
+            return None
+
         self._trace_func = trace_func
 
     @property
@@ -155,7 +157,7 @@ class Nopdb:
             bp = Breakpoint(scope=scope, line=line, cond=cond)
             handle = self.add_callback(scope, bp._callback, ['call', 'line'])
             try:
-                yield bp
+                yield bp  # type: ignore
             finally:
                 self.remove_callback(handle)
 

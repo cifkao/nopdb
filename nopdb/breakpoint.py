@@ -27,7 +27,7 @@ class Breakpoint:
         self._todo_list: List[Callable[[FrameType, str, Any], None]] = []
 
     def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> list:
-        results = []
+        results: list = []
         self._todo_list.append(functools.partial(
             self._do_eval, expression=expression, variables=variables, results=results))
         return results

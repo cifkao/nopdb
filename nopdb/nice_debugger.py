@@ -8,7 +8,7 @@ from .common import TraceFunc
 
 def get_nice_debugger(frame: FrameType, cls: Type[bdb.Bdb], kwargs: dict):
 
-    class NiceDebugger(cls):
+    class NiceDebugger(cls):  # type: ignore
 
         def __init__(self, frame: FrameType, kwargs: dict):
             self._orig_trace_func = sys.gettrace()
@@ -30,6 +30,7 @@ def get_nice_debugger(frame: FrameType, cls: Type[bdb.Bdb], kwargs: dict):
                 return super().trace_dispatch(frame, event, arg)
             except bdb.BdbQuit:
                 self._restore_trace_funcs()
+                return None
 
         def _restore_trace_funcs(self) -> None:
             _restore_local_trace_funcs(self._orig_local_trace_funcs)

@@ -20,13 +20,14 @@ class CallInfo:
         return '{}(name={!r}, args={}({}), return_value={!r})'.format(
             type(self).__name__, self.name,
             type(self.args).__name__,
-            ', '.join('{}={!r}'.format(k, v) for k, v in self.args.items()),
+            ', '.join('{}={!r}'.format(k, v) for k, v in (self.args or {}).items()),
             self.return_value,
         )
 
     def print_stack(self, file = None) -> None:
-        for line in self.stack.format():
-            print(line, end='', file=file)
+        if self.stack is not None:
+            for line in self.stack.format():
+                print(line, end='', file=file)
 
 
 class CallCapture:
