@@ -48,31 +48,6 @@ class Nopdb:
             Handle, Tuple[Scope, Set[str], TraceFunc]
         ] = collections.OrderedDict()
 
-        def trace_func(frame: FrameType, event: str, arg: Any) -> Optional[TraceFunc]:
-            # Do not do anything if this instance is not currently tracing
-            if sys.gettrace() is not trace_func:
-                return None
-
-            trace_locally = False
-
-            # Check which callbacks we need to call
-            for scope, events, callback in self._callbacks.values():
-                if scope.match_frame(frame):
-                    # If an event other than 'call' is requested, we will need to
-                    # return a local trace function.
-                    if event == "call" and not all(e == "call" for e in events):
-                        trace_locally = True
-
-                    if event in events:
-                        callback(frame, event, arg)
-
-            if trace_locally:
-                return trace_func
-
-            return None
-
-        self._trace_func = trace_func
-
     @property
     def started(self) -> bool:
         return self._started
@@ -87,7 +62,7 @@ class Nopdb:
     def stop(self) -> None:
         if not self._started:
             raise RuntimeError("nopdb has not been started")
-        if sys.gettrace() is self._trace_func:
+        if getattr(sys.gettrace(), "__self__") is self:
             sys.settrace(self._orig_trace_func)
         else:
             warnings.warn(
@@ -100,7 +75,7 @@ class Nopdb:
     @contextlib.contextmanager
     def _as_started(self):
         started = self._started
-        if started and sys.gettrace() is not self._trace_func:
+        if started and getattr(sys.gettrace(), "__self__") is not self:
             raise RuntimeError(
                 "nopdb has been started, but a different trace function was "
                 "set in the meantime"
@@ -119,6 +94,31 @@ class Nopdb:
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.stop()
+
+    def _trace_func(
+        self, frame: FrameType, event: str, arg: Any
+    ) -> Optional[TraceFunc]:
+        # Do not do anything if this instance is not currently tracing
+        if getattr(sys.gettrace(), "__self__", None) is not self:
+            return None
+
+        trace_locally = False
+
+        # Check which callbacks we need to call
+        for scope, events, callback in self._callbacks.values():
+            if scope.match_frame(frame):
+                # If an event other than 'call' is requested, we will need to
+                # return a local trace function.
+                if event == "call" and not all(e == "call" for e in events):
+                    trace_locally = True
+
+                if event in events:
+                    callback(frame, event, arg)
+
+        if trace_locally:
+            return self._trace_func
+
+        return None
 
     def add_callback(
         self, scope: Scope, callback: TraceFunc, events: Iterable[str] = None
@@ -197,6 +197,12 @@ _THREAD_LOCAL = threading.local()
 
 
 def get_nopdb() -> Nopdb:
+    # If a Nopdb instance is currently tracing, return it
+    trace_fn = sys.gettrace()
+    if hasattr(trace_fn, "__self__"):
+        return getattr(trace_fn, "__self__")
+
+    # Otherwise return the default instance for this thread
     if not hasattr(_THREAD_LOCAL, "default_nopdb"):
         _THREAD_LOCAL.default_nopdb = Nopdb()
     return _THREAD_LOCAL.default_nopdb
