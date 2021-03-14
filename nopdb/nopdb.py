@@ -138,6 +138,29 @@ class Nopdb:
         file: Optional[Union[str, PathLike]] = None,
         obj: Optional[Any] = None
     ) -> ContextManager[CallInfo]:
+        """Capture a function call.
+
+        If a function is called multiple times, only the last call will be captured.
+
+        Args:
+            function (Union[Callable, str], optional): A Python callable or the name of
+                a Python function. If an instance method is passed, only calls invoked
+                on that particular instance will be captured. Defaults to None.
+            module (ModuleType, optional): A Python module. If given, only calls to
+                functions defined in this module will be captured. Defaults to None.
+            file (Union[str, PathLike], optional): A path to a Python source file. If
+                given, only calls to functions defined in this file will be captured.
+                If a string is passed, it will be used as a glob-style pattern for
+                :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
+                will be resolved to a canonical path and checked for an exact match.
+                Defaults to None.
+            obj (Any, optional): A Python object. If given, only calls to this object's
+                methods will be captured. Defaults to None.
+
+        Returns:
+            ContextManager[CallInfo]: A context manager returning a :class:`CallInfo`
+            object.
+        """
         return cast(
             ContextManager[CallInfo],
             self._capture_calls(
@@ -153,6 +176,27 @@ class Nopdb:
         file: Optional[Union[str, PathLike]] = None,
         obj: Optional[Any] = None
     ) -> ContextManager[List[CallInfo]]:
+        """Capture function calls.
+
+        Args:
+            function (Union[Callable, str], optional): A Python callable or the name of
+                a Python function. If an instance method is passed, only calls invoked
+                on that particular instance will be captured. Defaults to None.
+            module (ModuleType, optional): A Python module. If given, only calls to
+                functions defined in this module will be captured. Defaults to None.
+            file (Union[str, PathLike], optional): A path to a Python source file. If
+                given, only calls to functions defined in this file will be captured.
+                If a string is passed, it will be used as a glob-style pattern for
+                :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
+                will be resolved to a canonical path and checked for an exact match.
+                Defaults to None.
+            obj (Any, optional): A Python object. If given, only calls to this object's
+                methods will be captured. Defaults to None.
+
+        Returns:
+            ContextManager[List[CallInfo]]: A context manager returning a list of
+            :class:`CallInfo` objects.
+        """
         return cast(
             ContextManager[List[CallInfo]],
             self._capture_calls(
@@ -183,6 +227,28 @@ class Nopdb:
         line: Optional[int] = None,
         cond: Optional[Union[str, CodeType]] = None
     ) -> ContextManager[Breakpoint]:
+        """Set a breakpoint.
+
+        Args:
+            function (Union[Callable, str], optional): A Python callable or the name of
+                a Python function. If an instance method is passed, only calls invoked
+                on that particular instance will be captured. Defaults to None.
+            module (ModuleType, optional): A Python module. If given, only calls to
+                functions defined in this module will be captured. Defaults to None.
+            file (Union[str, PathLike], optional): A path to a Python source file. If
+                given, only calls to functions defined in this file will be captured.
+                If a string is passed, it will be used as a glob-style pattern for
+                :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
+                will be resolved to a canonical path and checked for an exact match.
+                Defaults to None.
+            line (int, optional): The line number at which to break. Defaults to None.
+            cond (Union[str, CodeType], optional): A condition to evaluate. If given,
+                the breakpoint will only be triggered when the condition evaluates
+                to true. Defaults to None.
+
+        Returns:
+            ContextManager[Breakpoint]: A context manager returning the breakpoint.
+        """
         with self._as_started():
             scope = Scope(function, module, file)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
@@ -197,6 +263,11 @@ _THREAD_LOCAL = threading.local()
 
 
 def get_nopdb() -> Nopdb:
+    """Return an instance of :class:`Nopdb`.
+
+    If a :class:`Nopdb` instance is currently active, that instance is returned.
+    Otherwise, the default instance for the current thread is returned.
+    """
     # If a Nopdb instance is currently tracing, return it
     trace_fn = sys.gettrace()
     if hasattr(trace_fn, "__self__"):
