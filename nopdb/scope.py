@@ -11,20 +11,15 @@ class Scope:
         function: Optional[Union[Callable, str]] = None,
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
-        obj: Optional[Any] = None,
     ):
         self.function = function
         self.module = module
-        self.obj = obj
 
         self._fn_name, self._fn_code, self._fn_self = None, None, None
         if isinstance(function, str):
             self._fn_name = function
         elif function is not None:
             self._fn_code, self._fn_self = _get_code_and_self(function)
-
-        if obj is not None:
-            self._fn_self = obj
 
         self.file: Optional[Union[str, pathlib.Path]] = None
         if isinstance(file, PathLike):

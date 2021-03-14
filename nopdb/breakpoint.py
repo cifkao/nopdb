@@ -6,11 +6,12 @@ import sys
 from types import CodeType, FrameType
 from typing import Any, Callable, List, Optional, Dict, Type, Union
 
+from .common import FriendlyContextManager
 from .nice_debugger import get_nice_debugger
 from .scope import Scope
 
 
-class Breakpoint:
+class Breakpoint(FriendlyContextManager):
     def __init__(
         self,
         scope: Scope,

@@ -2,25 +2,23 @@ import collections
 import contextlib
 import functools
 from os import PathLike
+import pathlib
 import sys
 import threading
 from types import CodeType, FrameType, ModuleType
 from typing import (
     Any,
     Callable,
-    ContextManager,
     Iterable,
-    List,
     Optional,
     Dict,
     Set,
     Tuple,
     Union,
-    cast,
 )
 import warnings
 
-from .call_info import CallCapture, CallInfo
+from .call_capture import CallCapture, CallListCapture
 from .common import TraceFunc
 from .scope import Scope
 from .breakpoint import Breakpoint
@@ -43,6 +41,7 @@ class Handle:
 class Nopdb:
     def __init__(self):
         self._started = False
+        self._suspended = False
         self._orig_trace_func: Optional[TraceFunc] = None
         self._callbacks: Dict[
             Handle, Tuple[Scope, Set[str], TraceFunc]
@@ -88,6 +87,15 @@ class Nopdb:
             if not started:
                 self.stop()
 
+    @contextlib.contextmanager
+    def _as_suspended(self):
+        suspended = self._suspended
+        self._suspended = True
+        try:
+            yield
+        finally:
+            self._suspended = suspended
+
     def __enter__(self) -> "Nopdb":
         self.start()
         return self
@@ -101,6 +109,16 @@ class Nopdb:
         # Do not do anything if this instance is not currently tracing
         if getattr(sys.gettrace(), "__self__", None) is not self:
             return None
+        if self._suspended:
+            return None
+
+        # Avoid tracing our own code
+        try:
+            # Replacement for PurePath.is_relative_to() for Python < 3.9
+            pathlib.PurePath(frame.f_code.co_filename).relative_to(_NOPDB_ROOT)
+            return None
+        except ValueError:
+            pass
 
         trace_locally = False
 
@@ -135,9 +153,8 @@ class Nopdb:
         function: Optional[Union[Callable, str]] = None,
         *,
         module: Optional[ModuleType] = None,
-        file: Optional[Union[str, PathLike]] = None,
-        obj: Optional[Any] = None
-    ) -> ContextManager[CallInfo]:
+        file: Optional[Union[str, PathLike]] = None
+    ) -> CallCapture:
         """Capture a function call.
 
         If a function is called multiple times, only the last call will be captured.
@@ -158,24 +175,29 @@ class Nopdb:
                 methods will be captured. Defaults to None.
 
         Returns:
-            ContextManager[CallInfo]: A context manager returning a :class:`CallInfo`
-            object.
+            CallCapture: An instance of :class:`CallInfo` which also works as a context
+                manager.
         """
-        return cast(
-            ContextManager[CallInfo],
-            self._capture_calls(
-                scope=Scope(function, module, file, obj), capture_all=False
-            ),
-        )
+        with self._as_suspended():
+            capture = CallCapture()
+            capture._exit_stack.enter_context(self._as_started())
+            handle = self.add_callback(
+                Scope(function, module, file),
+                capture._callback,
+                ["call", "return"],
+            )
+            capture._exit_stack.callback(
+                functools.partial(self.remove_callback, handle=handle)
+            )
+            return capture
 
     def capture_calls(
         self,
         function: Optional[Union[Callable, str]] = None,
         *,
         module: Optional[ModuleType] = None,
-        file: Optional[Union[str, PathLike]] = None,
-        obj: Optional[Any] = None
-    ) -> ContextManager[List[CallInfo]]:
+        file: Optional[Union[str, PathLike]] = None
+    ) -> CallListCapture:
         """Capture function calls.
 
         Args:
@@ -190,34 +212,24 @@ class Nopdb:
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
                 Defaults to None.
-            obj (Any, optional): A Python object. If given, only calls to this object's
-                methods will be captured. Defaults to None.
 
         Returns:
-            ContextManager[List[CallInfo]]: A context manager returning a list of
-            :class:`CallInfo` objects.
+            CallListCapture: A list of :class:`CallInfo` objects which also works as a
+                context manager.
         """
-        return cast(
-            ContextManager[List[CallInfo]],
-            self._capture_calls(
-                scope=Scope(function, module, file, obj), capture_all=True
-            ),
-        )
+        with self._as_suspended():
+            capture = CallListCapture()
+            capture._exit_stack.enter_context(self._as_started())
+            handle = self.add_callback(
+                Scope(function, module, file),
+                capture._callback,
+                ["call", "return"],
+            )
+            capture._exit_stack.callback(
+                functools.partial(self.remove_callback, handle=handle)
+            )
+            return capture
 
-    @contextlib.contextmanager
-    def _capture_calls(self, *, scope: Scope, capture_all: bool):
-        with self._as_started():
-            capture = CallCapture(capture_all=capture_all)
-            handle = self.add_callback(scope, capture, ["call", "return"])
-            try:
-                if capture_all:
-                    yield capture.result_list
-                else:
-                    yield capture.result
-            finally:
-                self.remove_callback(handle)
-
-    @contextlib.contextmanager  # type: ignore
     def breakpoint(
         self,
         *,
@@ -226,7 +238,7 @@ class Nopdb:
         file: Optional[Union[str, PathLike]] = None,
         line: Optional[int] = None,
         cond: Optional[Union[str, CodeType]] = None
-    ) -> ContextManager[Breakpoint]:
+    ) -> Breakpoint:
         """Set a breakpoint.
 
         Args:
@@ -247,16 +259,17 @@ class Nopdb:
                 to true. Defaults to None.
 
         Returns:
-            ContextManager[Breakpoint]: A context manager returning the breakpoint.
+            Breakpoint: The breakpoint object, which also works as a context manager.
         """
-        with self._as_started():
+        with self._as_suspended():
             scope = Scope(function, module, file)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
+            bp._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(scope, bp._callback, ["call", "line"])
-            try:
-                yield bp  # type: ignore
-            finally:
-                self.remove_callback(handle)
+            bp._exit_stack.callback(
+                functools.partial(self.remove_callback, handle=handle)
+            )
+            return bp
 
 
 _THREAD_LOCAL = threading.local()
@@ -265,8 +278,9 @@ _THREAD_LOCAL = threading.local()
 def get_nopdb() -> Nopdb:
     """Return an instance of :class:`Nopdb`.
 
-    If a :class:`Nopdb` instance is currently active, that instance is returned.
-    Otherwise, the default instance for the current thread is returned.
+    If a :class:`Nopdb` instance is currently active in the current thread, that
+    instance is returned. Otherwise, the default instance for the current thread is
+    returned.
     """
     # If a Nopdb instance is currently tracing, return it
     trace_fn = sys.gettrace()
@@ -292,3 +306,6 @@ def capture_calls(*args, **kwargs):
 @functools.wraps(get_nopdb().breakpoint)
 def breakpoint(*args, **kwargs):
     return get_nopdb().breakpoint(*args, **kwargs)
+
+
+_NOPDB_ROOT = pathlib.PurePath(__file__).parent
