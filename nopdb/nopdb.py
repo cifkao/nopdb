@@ -4,7 +4,6 @@ import functools
 from os import PathLike
 import pathlib
 import sys
-import threading
 from types import CodeType, FrameType, ModuleType
 from typing import (
     Any,
@@ -19,7 +18,7 @@ from typing import (
 import warnings
 
 from .call_capture import CallCapture, CallListCapture
-from .common import TraceFunc
+from .common import TraceFunc, THREAD_LOCAL, suspend, resume, is_suspended
 from .scope import Scope
 from .breakpoint import Breakpoint
 
@@ -47,7 +46,6 @@ class NoPdb:
 
     def __init__(self):
         self._started = False
-        self._suspended = False
         self._orig_trace_func: Optional[TraceFunc] = None
         self._callbacks: Dict[
             Handle, Tuple[Scope, Set[str], TraceFunc]
@@ -101,15 +99,6 @@ class NoPdb:
             if not started:
                 self.stop()
 
-    @contextlib.contextmanager
-    def _as_suspended(self):
-        suspended = self._suspended
-        self._suspended = True
-        try:
-            yield
-        finally:
-            self._suspended = suspended
-
     def __enter__(self) -> "NoPdb":
         self.start()
         return self
@@ -123,7 +112,7 @@ class NoPdb:
         # Do not do anything if this instance is not currently tracing
         if getattr(sys.gettrace(), "__self__", None) is not self:
             return None
-        if self._suspended:
+        if is_suspended():
             return None
 
         # Avoid tracing our own code
@@ -210,7 +199,8 @@ class NoPdb:
                 An instance of :class:`CallInfo` which also works as a context
                 manager.
         """
-        with self._as_suspended():
+        suspend()
+        try:
             capture = CallCapture()
             capture._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(
@@ -222,6 +212,8 @@ class NoPdb:
                 functools.partial(self.remove_callback, handle=handle)
             )
             return capture
+        finally:
+            resume()
 
     def capture_calls(
         self,
@@ -249,7 +241,8 @@ class NoPdb:
                 A list of :class:`CallInfo` objects which also works as a
                 context manager.
         """
-        with self._as_suspended():
+        suspend()
+        try:
             capture = CallListCapture()
             capture._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(
@@ -261,6 +254,8 @@ class NoPdb:
                 functools.partial(self.remove_callback, handle=handle)
             )
             return capture
+        finally:
+            resume()
 
     def breakpoint(
         self,
@@ -315,7 +310,8 @@ class NoPdb:
             Breakpoint:
                 The breakpoint object, which also works as a context manager.
         """
-        with self._as_suspended():
+        suspend()
+        try:
             scope = Scope(function, module, file)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
             bp._exit_stack.enter_context(self._as_started())
@@ -324,9 +320,8 @@ class NoPdb:
                 functools.partial(self.remove_callback, handle=handle)
             )
             return bp
-
-
-_THREAD_LOCAL = threading.local()
+        finally:
+            resume()
 
 
 def get_nopdb() -> NoPdb:
@@ -342,9 +337,9 @@ def get_nopdb() -> NoPdb:
         return trace_obj
 
     # Otherwise return the default instance for this thread
-    if not hasattr(_THREAD_LOCAL, "default_nopdb"):
-        _THREAD_LOCAL.default_nopdb = NoPdb()
-    return _THREAD_LOCAL.default_nopdb
+    if not hasattr(THREAD_LOCAL, "default_nopdb"):
+        THREAD_LOCAL.default_nopdb = NoPdb()
+    return THREAD_LOCAL.default_nopdb
 
 
 @functools.wraps(get_nopdb().capture_call)
