@@ -12,8 +12,8 @@ an actual debugger. With Nopdb, you can:
 * **place "breakpoints"** which do not actually stop the execution of the program, but
   allow **scheduling actions** that get performed when the breakpoint is hit, namely:
 
-   * **evaluating expressions** to retrieve their values later
-   * **executing arbitrary code**, including modifying local variables
+  * **evaluating expressions** to retrieve their values later
+  * **executing arbitrary code**, including modifying local variables
 
 Contents
 --------
