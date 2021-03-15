@@ -9,6 +9,18 @@ from .common import FriendlyContextManager
 
 
 class CallInfo:
+    """Information about a function call.
+
+    Attributes:
+        name (str): The name of the function's code object.
+        file (str): The path to the file where the function was defined.
+        stack (traceback.StackSummary): The call stack.
+        args (dict): The function's arguments.
+        locals (dict): Local variables on return.
+        globals (dict): Global variables on return.
+        return_value: The return value.
+    """
+
     def __init__(self):
         self.name: Optional[str] = None
         self.file: Optional[str] = None
@@ -28,6 +40,7 @@ class CallInfo:
         )
 
     def print_stack(self, file=None) -> None:
+        """Print the call stack."""
         if self.stack is not None:
             for line in self.stack.format():
                 print(line, end="", file=file)

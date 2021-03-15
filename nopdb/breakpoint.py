@@ -43,10 +43,10 @@ class Breakpoint(FriendlyContextManager):
         """Schedule an expression to be evaluated at the breakpoint.
 
         Args:
-            expression (Union[str, bytes, CodeType]): A Python expression to be
+            expression (str, bytes or ~types.CodeType): A Python expression to be
                 evaluated in the breakpoint's scope.
-            variables (Dict[str, Any], optional): External variables for the
-                expression.
+            variables (~typing.Dict[str, ~typing.Any], optional): External variables
+                for the expression.
 
         Returns:
             list:
@@ -71,12 +71,12 @@ class Breakpoint(FriendlyContextManager):
         """Schedule some code to be executed at the breakpoint.
 
         Args:
-            code (Union[str, bytes, CodeType]): Python source code to be executed in
+            code (str, bytes or ~types.CodeType): Python source code to be executed in
                 the breakpoint's scope. Any changes to local variables (including
                 newly defined variables) will be preserved in the local scope.
-            variables (Dict[str, Any], optional): External variables for the code.
-                These may not conflict with local variables and will *not* be
-                preserved in the local scope.
+            variables (~typing.Dict[str, ~typing.Any], optional): External variables
+                for the code. These may not conflict with local variables and will
+                *not* be preserved in the local scope.
         """
         self._todo_list.append(
             functools.partial(self._do_exec, code=code, variables=variables)
@@ -86,8 +86,8 @@ class Breakpoint(FriendlyContextManager):
         """Schedule an interactive debugger to be entered at the breakpoint.
 
         Args:
-            debugger_cls (Type[bdb.Bdb], optional): The debuger class. Defaults to
-                :class:`pdb.Pdb`.
+            debugger_cls (~typing.Type[bdb.Bdb], optional): The debuger class. Defaults
+                to :class:`pdb.Pdb`.
             **kwargs: Keyword arguments to pass to the debugger.
         """
         self._todo_list.append(

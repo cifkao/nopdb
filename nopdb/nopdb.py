@@ -39,6 +39,12 @@ class Handle:
 
 
 class Nopdb:
+    """The main Nopdb class.
+
+    Multiple instances can be created, but only one can be active in a given thread at
+    a given time. It can be used as a context manager.
+    """
+
     def __init__(self):
         self._started = False
         self._suspended = False
@@ -52,6 +58,10 @@ class Nopdb:
         return self._started
 
     def start(self) -> None:
+        """Start this instance.
+
+        Called automatically when the object is used as a context manager.
+        """
         if self._started:
             raise RuntimeError("nopdb has already been started")
         self._orig_trace_func = sys.gettrace()
@@ -59,6 +69,10 @@ class Nopdb:
         self._started = True
 
     def stop(self) -> None:
+        """Stop this instance.
+
+        Called automatically when the object is used as a context manager.
+        """
         if not self._started:
             raise RuntimeError("nopdb has not been started")
         if getattr(sys.gettrace(), "__self__", None) is self:
@@ -139,13 +153,33 @@ class Nopdb:
         return None
 
     def add_callback(
-        self, scope: Scope, callback: TraceFunc, events: Iterable[str] = None
+        self, scope: Scope, callback: TraceFunc, events: Iterable[str]
     ) -> Handle:
+        """Register a low-level callback for the given type(s) of events.
+
+        Args:
+            scope (Scope): The scope in which the callback should be active.
+            callback (TraceFunc): The callback function. It should have the same
+                signature as the function passed to :func:`sys.settrace`, but its
+                return value will be ignored.
+            events (~typing.Iterable[str]): A list of event names (:code:`'call'`,
+                :code:`'line'`, :code:`'return'` or :code:`'exception'`); see
+                :func:`sys.settrace`.
+
+        Returns:
+            Handle:
+                A handle that can be passed to :meth:`remove_callback`.
+        """
         handle = Handle()
-        self._callbacks[handle] = (scope, set(events or []), callback)
+        self._callbacks[handle] = (scope, set(events), callback)
         return handle
 
     def remove_callback(self, handle: Handle):
+        """Remove a callback added using :meth:`add_callback`.
+
+        Args:
+            handle (Handle): A handle returned by :meth:`add_callback`.
+        """
         del self._callbacks[handle]
 
     def capture_call(
@@ -157,15 +191,15 @@ class Nopdb:
     ) -> CallCapture:
         """Capture a function call.
 
-        If a function is called multiple times, only the last call will be captured.
+        If multiple calls occur, only the last call will be captured.
 
         Args:
-            function (Union[Callable, str], optional): A Python callable or the name of
-                a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will be captured.
-            module (ModuleType, optional): A Python module. If given, only calls to
-                functions defined in this module will be captured.
-            file (Union[str, PathLike], optional): A path to a Python source file. If
+            function (~typing.Callable or str, optional): A Python callable or the name
+                of a Python function. If an instance method is passed, only calls
+                invoked on that particular instance will be captured.
+            module (~types.ModuleType, optional): A Python module. If given, only calls
+                to functions defined in this module will be captured.
+            file (str or ~os.PathLike, optional): A path to a Python source file. If
                 given, only calls to functions defined in this file will be captured.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
@@ -199,12 +233,12 @@ class Nopdb:
         """Capture function calls.
 
         Args:
-            function (Union[Callable, str], optional): A Python callable or the name of
-                a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will be captured.
-            module (ModuleType, optional): A Python module. If given, only calls to
-                functions defined in this module will be captured.
-            file (Union[str, PathLike], optional): A path to a Python source file. If
+            function (~typing.Callable or str, optional): A Python callable or the name
+                of a Python function. If an instance method is passed, only calls
+                invoked on that particular instance will be captured.
+            module (~types.ModuleType, optional): A Python module. If given, only calls
+                to functions defined in this module will be captured.
+            file (str or ~os.PathLike, optional): A path to a Python source file. If
                 given, only calls to functions defined in this file will be captured.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
@@ -260,11 +294,11 @@ class Nopdb:
            print(x, type_y)  # Retrieve the values
 
         Args:
-            function (Union[Callable, str], optional): A Python callable or the name of
-                a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will trigger the breakpoint.
-            module (ModuleType, optional): A Python module.
-            file (Union[str, PathLike], optional): A path to a Python source file.
+            function (~typing.Callable or str, optional): A Python callable or the name
+                of a Python function. If an instance method is passed, only calls
+                invoked on that particular instance will trigger the breakpoint.
+            module (~types.ModuleType, optional): A Python module.
+            file (str or ~os.PathLike, optional): A path to a Python source file.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
@@ -273,7 +307,7 @@ class Nopdb:
                 breakpoint will be triggered as soon as the function is called. If no
                 `function` is passed, `line` is required. Note that unlike in `pdb`,
                 the breakpoint will only get triggered by this exact line number.
-            cond (Union[str, bytes, CodeType], optional): A condition to evaluate. If
+            cond (str, bytes or ~types.CodeType, optional): A condition to evaluate. If
                 given, the breakpoint will only be triggered when the condition
                 evaluates to true.
 
