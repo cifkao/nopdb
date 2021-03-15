@@ -10,7 +10,7 @@ API Reference
 
 .. autofunction:: get_nopdb
 
-.. autoclass:: Nopdb
+.. autoclass:: NoPdb
     :members:
     :undoc-members:
 

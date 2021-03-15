@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = "nopdb"
+project = "NoPdb"
 copyright = "2021, Ondřej Cífka"
 author = "Ondřej Cífka"
 

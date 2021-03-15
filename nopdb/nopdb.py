@@ -26,7 +26,7 @@ from .breakpoint import Breakpoint
 
 __all__ = [
     "Handle",
-    "Nopdb",
+    "NoPdb",
     "breakpoint",
     "capture_call",
     "capture_calls",
@@ -38,8 +38,8 @@ class Handle:
     pass
 
 
-class Nopdb:
-    """The main Nopdb class.
+class NoPdb:
+    """The main NoPdb class.
 
     Multiple instances can be created, but only one can be active in a given thread at
     a given time. It can be used as a context manager.
@@ -110,7 +110,7 @@ class Nopdb:
         finally:
             self._suspended = suspended
 
-    def __enter__(self) -> "Nopdb":
+    def __enter__(self) -> "NoPdb":
         self.start()
         return self
 
@@ -329,21 +329,21 @@ class Nopdb:
 _THREAD_LOCAL = threading.local()
 
 
-def get_nopdb() -> Nopdb:
-    """Return an instance of :class:`Nopdb`.
+def get_nopdb() -> NoPdb:
+    """Return an instance of :class:`NoPdb`.
 
-    If a :class:`Nopdb` instance is currently active in the current thread, that
+    If a :class:`NoPdb` instance is currently active in the current thread, that
     instance is returned. Otherwise, the default instance for the current thread is
     returned.
     """
-    # If a Nopdb instance is currently tracing, return it
+    # If a NoPdb instance is currently tracing, return it
     trace_obj = getattr(sys.gettrace(), "__self__", None)
-    if isinstance(trace_obj, Nopdb):
+    if isinstance(trace_obj, NoPdb):
         return trace_obj
 
     # Otherwise return the default instance for this thread
     if not hasattr(_THREAD_LOCAL, "default_nopdb"):
-        _THREAD_LOCAL.default_nopdb = Nopdb()
+        _THREAD_LOCAL.default_nopdb = NoPdb()
     return _THREAD_LOCAL.default_nopdb
 
 

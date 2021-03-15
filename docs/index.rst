@@ -1,12 +1,11 @@
-Nopdb
-========
+NoPdb: Non-interactive Python Debugger
+======================================
 
 Introduction
 ------------
 
-Nopdb is a **programmatic debugger** for Python. This means it gives you access to
-**debugger-like superpowers** directly from your code, without the hassle of starting
-an actual debugger. With Nopdb, you can:
+NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This means it gives you access to
+**debugger-like superpowers** directly from your code. With NoPdb, you can:
 
 * **capture function calls**, including arguments, local variables and return values
 * **set "breakpoints"** which do not actually stop the execution of the program, but
@@ -14,7 +13,7 @@ an actual debugger. With Nopdb, you can:
 
   * **evaluate expressions** to retrieve their values later
   * **execute arbitrary code**, including modifying local variables
-  * **enter an actual debugger** like `pdb`
+  * **enter an interactive debugger** like `pdb`
 
 Contents
 --------
