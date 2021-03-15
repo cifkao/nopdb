@@ -175,7 +175,8 @@ class Nopdb:
                 methods will be captured. Defaults to None.
 
         Returns:
-            CallCapture: An instance of :class:`CallInfo` which also works as a context
+            CallCapture:
+                An instance of :class:`CallInfo` which also works as a context
                 manager.
         """
         with self._as_suspended():
@@ -214,7 +215,8 @@ class Nopdb:
                 Defaults to None.
 
         Returns:
-            CallListCapture: A list of :class:`CallInfo` objects which also works as a
+            CallListCapture:
+                A list of :class:`CallInfo` objects which also works as a
                 context manager.
         """
         with self._as_suspended():
@@ -259,7 +261,8 @@ class Nopdb:
                 to true. Defaults to None.
 
         Returns:
-            Breakpoint: The breakpoint object, which also works as a context manager.
+            Breakpoint:
+                The breakpoint object, which also works as a context manager.
         """
         with self._as_suspended():
             scope = Scope(function, module, file)
