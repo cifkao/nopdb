@@ -82,7 +82,7 @@ class Breakpoint(FriendlyContextManager):
             functools.partial(self._do_exec, code=code, variables=variables)
         )
 
-    def debug(self, debugger_cls: Type[bdb.Bdb] = pdb.Pdb, **kwargs):
+    def debug(self, debugger_cls: Type[bdb.Bdb] = pdb.Pdb, **kwargs) -> None:
         """Schedule an interactive debugger to be entered at the breakpoint.
 
         Args:

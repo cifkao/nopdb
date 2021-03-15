@@ -174,7 +174,7 @@ class Nopdb:
         self._callbacks[handle] = (scope, set(events), callback)
         return handle
 
-    def remove_callback(self, handle: Handle):
+    def remove_callback(self, handle: Handle) -> None:
         """Remove a callback added using :meth:`add_callback`.
 
         Args:
