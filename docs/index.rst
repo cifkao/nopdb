@@ -9,11 +9,12 @@ Nopdb is a **programmatic debugger** for Python. This means it gives you access 
 an actual debugger. With Nopdb, you can:
 
 * **capture function calls**, including arguments, local variables and return values
-* **place "breakpoints"** which do not actually stop the execution of the program, but
-  allow **scheduling actions** that get performed when the breakpoint is hit, namely:
+* **set "breakpoints"** which do not actually stop the execution of the program, but
+  can trigger **user-defined actions** when hit, namely:
 
-  * **evaluating expressions** to retrieve their values later
-  * **executing arbitrary code**, including modifying local variables
+  * **evaluate expressions** to retrieve their values later
+  * **execute arbitrary code**, including modifying local variables
+  * **enter an actual debugger** like `pdb`
 
 Contents
 --------

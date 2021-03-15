@@ -162,17 +162,14 @@ class Nopdb:
         Args:
             function (Union[Callable, str], optional): A Python callable or the name of
                 a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will be captured. Defaults to None.
+                on that particular instance will be captured.
             module (ModuleType, optional): A Python module. If given, only calls to
-                functions defined in this module will be captured. Defaults to None.
+                functions defined in this module will be captured.
             file (Union[str, PathLike], optional): A path to a Python source file. If
                 given, only calls to functions defined in this file will be captured.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
-                Defaults to None.
-            obj (Any, optional): A Python object. If given, only calls to this object's
-                methods will be captured. Defaults to None.
 
         Returns:
             CallCapture:
@@ -204,15 +201,14 @@ class Nopdb:
         Args:
             function (Union[Callable, str], optional): A Python callable or the name of
                 a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will be captured. Defaults to None.
+                on that particular instance will be captured.
             module (ModuleType, optional): A Python module. If given, only calls to
-                functions defined in this module will be captured. Defaults to None.
+                functions defined in this module will be captured.
             file (Union[str, PathLike], optional): A path to a Python source file. If
                 given, only calls to functions defined in this file will be captured.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
-                Defaults to None.
 
         Returns:
             CallListCapture:
@@ -239,26 +235,47 @@ class Nopdb:
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
         line: Optional[int] = None,
-        cond: Optional[Union[str, CodeType]] = None
+        cond: Optional[Union[str, bytes, CodeType]] = None
     ) -> Breakpoint:
         """Set a breakpoint.
+
+        The returned :class:`Breakpoint` object works as a context manager that removes
+        the breakpoint on exit.
+
+        The breakpoint itself does not stop execution when hit, but can trigger
+        user-defined actions; see :meth:`Breakpoint.eval`, :meth:`Breakpoint.exec`,
+        :meth:`Breakpoint.debug`.
+
+        At least a function, a module or a file must be specified. If no function is
+        given, a line number is also required.
+
+        Example::
+
+           # Stop at line 3 of the file or notebook cell where f is defined
+           with nopdb.breakpoint(function=f, line=3) as bp:
+               x = bp.eval("x")             # Schedule an expression
+               type_y = bp.eval("type(y)")  # Another one
+               # Run some code that calls f...
+
+           print(x, type_y)  # Retrieve the values
 
         Args:
             function (Union[Callable, str], optional): A Python callable or the name of
                 a Python function. If an instance method is passed, only calls invoked
-                on that particular instance will be captured. Defaults to None.
-            module (ModuleType, optional): A Python module. If given, only calls to
-                functions defined in this module will be captured. Defaults to None.
-            file (Union[str, PathLike], optional): A path to a Python source file. If
-                given, only calls to functions defined in this file will be captured.
+                on that particular instance will trigger the breakpoint.
+            module (ModuleType, optional): A Python module.
+            file (Union[str, PathLike], optional): A path to a Python source file.
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
-                Defaults to None.
-            line (int, optional): The line number at which to break. Defaults to None.
-            cond (Union[str, CodeType], optional): A condition to evaluate. If given,
-                the breakpoint will only be triggered when the condition evaluates
-                to true. Defaults to None.
+            line (int, optional): The line number at which to break, counted from the
+                beginning of the file. If `None` and a `function` is passed, the
+                breakpoint will be triggered as soon as the function is called. If no
+                `function` is passed, `line` is required. Note that unlike in `pdb`,
+                the breakpoint will only get triggered by this exact line number.
+            cond (Union[str, bytes, CodeType], optional): A condition to evaluate. If
+                given, the breakpoint will only be triggered when the condition
+                evaluates to true.
 
         Returns:
             Breakpoint:

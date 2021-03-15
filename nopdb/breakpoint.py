@@ -12,22 +12,46 @@ from .scope import Scope
 
 
 class Breakpoint(FriendlyContextManager):
+    """A breakpoint that executes scheduled actions when hit.
+
+    Breakpoints are typically created with :func:`nopdb.breakpoint`. The breakpoint
+    object works as a context manager that removes the breakpoint on exit.
+    """
+
     def __init__(
         self,
         scope: Scope,
         line: Optional[int] = None,
-        cond: Optional[Union[str, CodeType]] = None,
+        cond: Optional[Union[str, bytes, CodeType]] = None,
     ):
         FriendlyContextManager.__init__(self)
         if line is None and scope.function is None:
-            raise RuntimeError("line number must be given if no function is specified")
+            raise TypeError("A line number must be given if no function is specified")
+        if all(x is None for x in [scope.module, scope.file, scope.function]):
+            raise TypeError("A module, file or function must be specified")
 
         self.scope = scope
         self.line = line
         self.cond = cond
         self._todo_list: List[Callable[[FrameType, str, Any], None]] = []
 
-    def eval(self, expression: str, variables: Optional[Dict[str, Any]] = None) -> list:
+    def eval(
+        self,
+        expression: Union[str, bytes, CodeType],
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> list:
+        """Schedule an expression to be evaluated at the breakpoint.
+
+        Args:
+            expression (Union[str, bytes, CodeType]): A Python expression to be
+                evaluated in the breakpoint's scope.
+            variables (Dict[str, Any], optional): External variables for the
+                expression.
+
+        Returns:
+            list:
+                An empty list that will later be filled with values of the expression.
+        """
         results: list = []
         self._todo_list.append(
             functools.partial(
@@ -40,13 +64,32 @@ class Breakpoint(FriendlyContextManager):
         return results
 
     def exec(
-        self, code: Union[str, CodeType], variables: Optional[Dict[str, Any]] = None
+        self,
+        code: Union[str, bytes, CodeType],
+        variables: Optional[Dict[str, Any]] = None,
     ) -> None:
+        """Schedule some code to be executed at the breakpoint.
+
+        Args:
+            code (Union[str, bytes, CodeType]): Python source code to be executed in
+                the breakpoint's scope. Any changes to local variables (including
+                newly defined variables) will be preserved in the local scope.
+            variables (Dict[str, Any], optional): External variables for the code.
+                These may not conflict with local variables and will *not* be
+                preserved in the local scope.
+        """
         self._todo_list.append(
             functools.partial(self._do_exec, code=code, variables=variables)
         )
 
     def debug(self, debugger_cls: Type[bdb.Bdb] = pdb.Pdb, **kwargs):
+        """Schedule an interactive debugger to be entered at the breakpoint.
+
+        Args:
+            debugger_cls (Type[bdb.Bdb], optional): The debuger class. Defaults to
+                :class:`pdb.Pdb`.
+            **kwargs: Keyword arguments to pass to the debugger.
+        """
         self._todo_list.append(
             functools.partial(self._do_debug, debugger_cls=debugger_cls, kwargs=kwargs)
         )
@@ -54,12 +97,12 @@ class Breakpoint(FriendlyContextManager):
     @staticmethod
     def _do_eval(
         frame: FrameType,
-        event: str,
+        event: Union[str, bytes, CodeType],
         arg: Any,
         expression: str,
         results: list,
         variables: Optional[Dict[str, Any]],
-    ) -> Any:
+    ) -> None:
         f_locals = {**frame.f_locals, **(variables or {})}
         result = eval(expression, dict(frame.f_globals), f_locals)
         results.append(result)
@@ -69,7 +112,7 @@ class Breakpoint(FriendlyContextManager):
         frame: FrameType,
         event: str,
         arg: Any,
-        code: Union[str, CodeType],
+        code: Union[str, bytes, CodeType],
         variables: Optional[Dict[str, Any]],
     ) -> None:
         if variables is None:
@@ -101,13 +144,13 @@ class Breakpoint(FriendlyContextManager):
         arg: Any,
         debugger_cls: Type[bdb.Bdb],
         kwargs: dict,
-    ):
+    ) -> None:
         debugger = get_nice_debugger(frame, debugger_cls, kwargs)
         sys.settrace(None)
         debugger.set_trace(frame=frame)
         debugger.trace_dispatch(frame, event, arg)
 
-    def _callback(self, frame: FrameType, event: str, arg: Any):
+    def _callback(self, frame: FrameType, event: str, arg: Any) -> None:
         # If line is None, we break at the first line...
         if self.line is None and frame.f_lineno != frame.f_code.co_firstlineno:
             return
