@@ -18,6 +18,7 @@ class Breakpoint(FriendlyContextManager):
         line: Optional[int] = None,
         cond: Optional[Union[str, CodeType]] = None,
     ):
+        FriendlyContextManager.__init__(self)
         if line is None and scope.function is None:
             raise RuntimeError("line number must be given if no function is specified")
 

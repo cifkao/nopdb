@@ -61,7 +61,7 @@ class Nopdb:
     def stop(self) -> None:
         if not self._started:
             raise RuntimeError("nopdb has not been started")
-        if getattr(sys.gettrace(), "__self__") is self:
+        if getattr(sys.gettrace(), "__self__", None) is self:
             sys.settrace(self._orig_trace_func)
         else:
             warnings.warn(
@@ -74,7 +74,7 @@ class Nopdb:
     @contextlib.contextmanager
     def _as_started(self):
         started = self._started
-        if started and getattr(sys.gettrace(), "__self__") is not self:
+        if started and getattr(sys.gettrace(), "__self__", None) is not self:
             raise RuntimeError(
                 "nopdb has been started, but a different trace function was "
                 "set in the meantime"
@@ -286,9 +286,9 @@ def get_nopdb() -> Nopdb:
     returned.
     """
     # If a Nopdb instance is currently tracing, return it
-    trace_fn = sys.gettrace()
-    if hasattr(trace_fn, "__self__"):
-        return getattr(trace_fn, "__self__")
+    trace_obj = getattr(sys.gettrace(), "__self__", None)
+    if isinstance(trace_obj, Nopdb):
+        return trace_obj
 
     # Otherwise return the default instance for this thread
     if not hasattr(_THREAD_LOCAL, "default_nopdb"):
