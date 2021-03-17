@@ -11,6 +11,7 @@ class Scope:
         function: Optional[Union[Callable, str]] = None,
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
+        unwrap: bool = True,
     ):
         self.function = function
         self.module = module
@@ -19,7 +20,7 @@ class Scope:
         if isinstance(function, str):
             self._fn_name = function
         elif function is not None:
-            self._fn_code, self._fn_self = _get_code_and_self(function)
+            self._fn_code, self._fn_self = _get_code_and_self(function, unwrap=unwrap)
 
         self.file: Optional[Union[str, pathlib.Path]] = None
         if isinstance(file, PathLike):
@@ -62,22 +63,33 @@ class Scope:
         return True
 
 
-def _get_code_and_self(fn: Callable) -> Tuple[CodeType, Any]:
-    # Bound method
-    if inspect.ismethod(fn):
-        assert isinstance(fn, MethodType)
-        return fn.__func__.__code__, fn.__self__
-    # Regular function
-    if inspect.isfunction(fn):
-        return fn.__code__, None
-    # Instance of a class that defines a __call__ method
-    if (
-        hasattr(fn, "__class__")
-        and hasattr(fn.__class__, "__call__")
-        and inspect.isfunction(fn.__class__.__call__)
-    ):
-        return fn.__class__.__call__.__code__, fn
+def _get_code_and_self(fn: Callable, unwrap: bool) -> Tuple[CodeType, Any]:
+    # First find the actual Python function that implements the callable, if possible.
+    # Then if unwrap is True, try to follow the wrapper chain, assuming that the
+    # wrappers are well-behaved (as opposed to, say, a Python function wrapping a
+    # built-in). If not, we raise an error.
+
+    def _unwrap(f):
+        if unwrap:
+            f = inspect.unwrap(f)
+        return f
+
+    exc: Optional[Exception] = None
+    try:
+        # Bound method
+        if inspect.ismethod(fn):
+            assert isinstance(fn, MethodType)
+            return _unwrap(fn.__func__).__code__, fn.__self__
+        # Regular function
+        if inspect.isfunction(fn):
+            return _unwrap(fn).__code__, None
+        # Instance of a class that defines a __call__ method
+        if hasattr(fn, "__class__") and hasattr(fn.__class__, "__call__"):
+            return _unwrap(fn.__class__.__call__).__code__, fn
+    except AttributeError as _exc:
+        exc = _exc
+
     raise TypeError(
         "Could not find the code for {!r}. "
         "Please provide a pure Python callable".format(fn)
-    )
+    ) from exc

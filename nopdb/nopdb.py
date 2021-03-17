@@ -176,7 +176,8 @@ class NoPdb:
         function: Optional[Union[Callable, str]] = None,
         *,
         module: Optional[ModuleType] = None,
-        file: Optional[Union[str, PathLike]] = None
+        file: Optional[Union[str, PathLike]] = None,
+        unwrap: bool = True
     ) -> CallCapture:
         """Capture a function call.
 
@@ -198,6 +199,9 @@ class NoPdb:
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
+            unwrap (bool, optional): Whether or not to unwrap `function` when it is a
+                wrapper (e.g. produced by a decorator). Only works when `function` is
+                given as a callable. Defaults to `True`.
 
         Returns:
             CallCapture:
@@ -209,7 +213,7 @@ class NoPdb:
             capture = CallCapture()
             capture._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(
-                Scope(function, module, file),
+                Scope(function, module, file, unwrap=unwrap),
                 capture._callback,
                 ["call", "return"],
             )
@@ -225,7 +229,8 @@ class NoPdb:
         function: Optional[Union[Callable, str]] = None,
         *,
         module: Optional[ModuleType] = None,
-        file: Optional[Union[str, PathLike]] = None
+        file: Optional[Union[str, PathLike]] = None,
+        unwrap: bool = True
     ) -> CallListCapture:
         """Capture function calls.
 
@@ -247,6 +252,9 @@ class NoPdb:
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
+            unwrap (bool, optional): Whether or not to unwrap `function` when it is a
+                wrapper (e.g. produced by a decorator). Only works when `function` is
+                given as a callable. Defaults to `True`.
 
         Returns:
             CallListCapture:
@@ -258,7 +266,7 @@ class NoPdb:
             capture = CallListCapture()
             capture._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(
-                Scope(function, module, file),
+                Scope(function, module, file, unwrap=unwrap),
                 capture._callback,
                 ["call", "return"],
             )
@@ -276,7 +284,8 @@ class NoPdb:
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
         line: Optional[int] = None,
-        cond: Optional[Union[str, bytes, CodeType]] = None
+        cond: Optional[Union[str, bytes, CodeType]] = None,
+        unwrap: bool = True
     ) -> Breakpoint:
         """Set a breakpoint.
 
@@ -317,6 +326,9 @@ class NoPdb:
             cond (str, bytes or ~types.CodeType, optional): A condition to evaluate. If
                 given, the breakpoint will only be triggered when the condition
                 evaluates to true.
+            unwrap (bool, optional): Whether or not to unwrap `function` when it is a
+                wrapper (e.g. produced by a decorator). Only works when `function` is
+                given as a callable. Defaults to `True`.
 
         Returns:
             Breakpoint:
@@ -324,7 +336,7 @@ class NoPdb:
         """
         suspend()
         try:
-            scope = Scope(function, module, file)
+            scope = Scope(function, module, file, unwrap=unwrap)
             bp = Breakpoint(scope=scope, line=line, cond=cond)
             bp._exit_stack.enter_context(self._as_started())
             handle = self.add_callback(scope, bp._callback, ["call", "line"])
