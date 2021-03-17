@@ -180,7 +180,12 @@ class NoPdb:
     ) -> CallCapture:
         """Capture a function call.
 
-        If multiple calls occur, only the last call will be captured.
+        The returned object can be used as a context manager, which will cause the
+        capturing to stop at the end of the block.
+
+        If multiple calls occur, the returned object will be updated as each call
+        returns. At the end, the returned object will contain information about the
+        call that was the last to return.
 
         Args:
             function (~typing.Callable or str, optional): A Python callable or the name
@@ -223,6 +228,13 @@ class NoPdb:
         file: Optional[Union[str, PathLike]] = None
     ) -> CallListCapture:
         """Capture function calls.
+
+        The return value is an initially empty list, which is updated with a new item
+        as each call returns. At the end, the list will contain a :class:`CallInfo`
+        object for each call, following the order in which the calls returned.
+
+        The return value can also be used as a context manager, which will cause the
+        capturing to stop at the end of the block.
 
         Args:
             function (~typing.Callable or str, optional): A Python callable or the name
@@ -269,7 +281,7 @@ class NoPdb:
         """Set a breakpoint.
 
         The returned :class:`Breakpoint` object works as a context manager that removes
-        the breakpoint on exit.
+        the breakpoint at the end of the block.
 
         The breakpoint itself does not stop execution when hit, but can trigger
         user-defined actions; see :meth:`Breakpoint.eval`, :meth:`Breakpoint.exec`,
