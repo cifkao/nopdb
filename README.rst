@@ -19,7 +19,7 @@ as long as it has :code:`sys.settrace()`.
 Capturing function calls
 ------------------------
 
-The functions :code:`capture_call` and :code:`capture_calls` allow
+The functions :code:`capture_call()` and :code:`capture_calls()` allow
 capturing useful information about calls to a given function.
 They are typically used as context managers, e.g.:
 
@@ -57,7 +57,7 @@ Like conventional debuggers, NoPdb can set breakpoints. However, because NoPdb i
 program. Instead, they allow executing actions scheduled in advance, such as
 evaluating expressions.
 
-To set a breakpoint, call the :code:`breakpoint` function. A breakpoint object
+To set a breakpoint, call the :code:`breakpoint()` function. A breakpoint object
 is returned, allowing to schedule actions using its methods such as
 :code:`eval()` and :code:`exec()`. For example:
 
