@@ -187,7 +187,7 @@ def get_update_locals():
         pass
 
     try:
-        import __pypy__
+        import __pypy__  # type: ignore
         return __pypy__.locals_to_fast
     except (ImportError, AttributeError):
         pass
