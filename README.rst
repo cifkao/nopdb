@@ -79,7 +79,9 @@ Not only can we capture values, we can also modify them!
     ...     x_before = bp.eval('x')
     ...     bp.exec('x += 1')
     ...     x_after = bp.eval('x')
-    >>> z_before
+    ...
+    ...     f(2)
+    >>> x_before
     [2]
-    >>> z_after
+    >>> x_after
     [3]
