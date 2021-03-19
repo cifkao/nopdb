@@ -22,7 +22,7 @@ They are typically used as context managers, e.g.:
 
 To have a concrete example, let's first define some simple functions to work with:
 
-.. code-block:: python
+.. doctest::
 
     >>> def f(x, y):
     ...     z = x + y
@@ -33,7 +33,7 @@ To have a concrete example, let's first define some simple functions to work wit
 Now let's try calling :code:`g()` and capturing the call to :code:`f()` that
 will be made from there:
 
-.. code-block:: python
+.. doctest::
 
     >>> with nopdb.capture_call(f) as call:
     ...     g(1)
@@ -44,18 +44,25 @@ will be made from there:
     1
     >>> call.return_value
     4
-    >>> call.locals
-    {'y': 1, 'x': 1, 'z': 2}
-    >>> call.print_stack()
+    >>> call.locals  # doctest: +SKIP
+    {'x': 1, 'y': 1, 'z': 2}
+    >>> call.print_stack()  # doctest: +SKIP
     File "<stdin>", line 2, in <module>
     File "<stdin>", line 2, in g
     File "<stdin>", line 1, in f
+
+.. doctest::
+    :hide:
+
+    >>> call.locals == {'x': 1, 'y': 1, 'z': 2}
+    True
 
 The object returned by :func:`capture_calls` will always contain information
 about the *most recent* call within the context manager block.
 To capture *all* the calls, we can use :func:`capture_calls` (in the plural):
 
-.. code-block:: python
+.. doctest::
+    :options: +NORMALIZE_WHITESPACE
 
     >>> with nopdb.capture_calls(function=f) as calls:
     ...     g(1)
@@ -97,7 +104,7 @@ methods.
 Using the example from the previous section, let's try to use a breakpoint to capture
 the value of a variable:
 
-.. code-block:: python
+.. doctest::
 
     >>> with nopdb.breakpoint(function=f, line=3) as bp:
     ...     z_values = bp.eval('z')  # Get the value of z whenever the breakpoint is hit
@@ -111,7 +118,7 @@ the value of a variable:
 
 Not only can we capture values, we can also modify them!
 
-.. code-block:: python
+.. doctest::
 
     >>> with nopdb.breakpoint(function=f, line=3) as bp:
     ...     # Get the value of z, then increment it, then get the new value
@@ -135,7 +142,7 @@ be used as a context manager, or started and stopped explicitly using the
 :meth:`~NoPdb.start` and :meth:`~NoPdb.stop` methods. This can be useful if we want to
 set multiple breakpoints or call captures in a single context:
 
-.. code-block:: python
+.. doctest::
 
     with nopdb.NoPdb():
         f_call = nopdb.capture_call(f)
@@ -146,7 +153,7 @@ set multiple breakpoints or call captures in a single context:
 
 Or alternatively:
 
-.. code-block:: python
+.. doctest::
 
     dbg = nopdb.NoPdb()
     f_call = dbg.capture_call(f)
