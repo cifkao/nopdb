@@ -6,8 +6,11 @@ jobs:
   doctest:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python: ["3.6", "3.9", "pypy-3.6"]
+        os: [ubuntu-latest]
+        python: ["3.6", "3.9", "pypy-3.6", "pypy-3.7"]
+        include:
+          - os: windows-latest
+            python: "3.8"
     name: Doctest
     runs-on: ${{ matrix.os }}
     steps:
