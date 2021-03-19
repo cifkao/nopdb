@@ -1,10 +1,10 @@
 import bdb
-import ctypes
 import functools
 import pdb
 import sys
 from types import CodeType, FrameType
 from typing import Any, Callable, List, Optional, Dict, Type, Union, TYPE_CHECKING
+import warnings
 
 from .common import NoPdbContextManager
 from .nice_debugger import get_nice_debugger
@@ -141,7 +141,7 @@ class Breakpoint(NoPdbContextManager):
         for name in list(frame.f_locals.keys() - f_locals.keys()):
             del frame.f_locals[name]
         frame.f_locals.update(f_locals)
-        _update_locals(frame)
+        update_locals(frame)
 
     @staticmethod
     def _do_debug(
@@ -173,5 +173,36 @@ class Breakpoint(NoPdbContextManager):
             action(frame, event, arg)
 
 
-def _update_locals(frame: FrameType):
-    ctypes.pythonapi.PyFrame_LocalsToFast(ctypes.py_object(frame), ctypes.c_int(1))
+def get_update_locals():
+    # fmt: off
+    try:
+        import ctypes
+        locals_to_fast = ctypes.pythonapi.PyFrame_LocalsToFast
+
+        def update_locals(frame: FrameType):
+            locals_to_fast(ctypes.py_object(frame), ctypes.c_int(1))
+
+        return update_locals
+    except (ImportError, AttributeError):
+        pass
+
+    try:
+        import __pypy__
+        return __pypy__.locals_to_fast
+    except (ImportError, AttributeError):
+        pass
+    # fmt: on
+
+    warnings.warn(
+        "Unknown Python implementation (not CPython or PyPy). Local variable "
+        "assignment probably will not work",
+        RuntimeWarning,
+    )
+
+    def update_locals(frame: FrameType):
+        pass
+
+    return update_locals
+
+
+update_locals = get_update_locals()
