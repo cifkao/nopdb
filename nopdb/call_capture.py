@@ -106,7 +106,7 @@ class CallListCapture(BaseCallCapture, NoPdbContextManager, List[CallInfo]):
         NoPdbContextManager.__init__(
             self, nopdb=nopdb, scope=scope, events=["call", "return"]
         )
-        List.__init__(self)
+        list.__init__(self)
 
     def _update_result(self, result: CallInfo) -> None:
         self.append(result)
