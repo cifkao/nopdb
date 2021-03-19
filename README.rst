@@ -12,7 +12,7 @@ NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This mean
   * **enter an interactive debugger** like `pdb`
 
 **Note:** This project is in its early development stage. Contributions and improvement ideas are welcome.
-  
+
 Capturing function calls
 ------------------------
 
@@ -60,13 +60,13 @@ is returned, allowing to schedule actions using its methods such as
 
 .. code-block:: python
 
-   # Stop at line 3 of the file or notebook cell where f is defined
+   # Break at line 3 of the file or notebook cell where f is defined
    with nopdb.breakpoint(function=f, line=3) as bp:
        x = bp.eval("x")             # Schedule an expression
        type_y = bp.eval("type(y)")  # Another one
        bp.exec("print(y)")          # Schedule a print statement
 
-       some_code_that_calls_fn()
+       some_code_that_calls_f()
 
    print(x, type_y)  # Retrieve the captured values
 
@@ -80,7 +80,7 @@ Not only can we capture values, we can also modify them!
     ...     bp.exec('x += 1')
     ...     x_after = bp.eval('x')
     ...
-    ...     f(2)
+    ...     some_code_that_calls_f()
     >>> x_before
     [2]
     >>> x_after
