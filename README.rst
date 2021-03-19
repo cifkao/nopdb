@@ -11,6 +11,9 @@ NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This mean
   * **execute arbitrary code**, including modifying local variables
   * **enter an interactive debugger** like `pdb`
 
+NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
+as long as it has :code:`sys.settrace()`.
+
 **Note:** This project is in its early development stage. Contributions and improvement ideas are welcome.
 
 Capturing function calls
@@ -36,9 +39,9 @@ The information we can retrieve includes the function's arguments, return value,
     >>> call
     CallCapture(name='f', args=OrderedDict(x=1, y=1), return_value=4)
     >>> call.print_stack()
-    File "<stdin>", line 2, in <module>
-    File "<stdin>", line 2, in g
-    File "<stdin>", line 1, in f
+      File "<stdin>", line 2, in <module>
+      File "<stdin>", line 2, in g
+      File "<stdin>", line 1, in f
     >>> call.args['x']
     1
     >>> call.return_value

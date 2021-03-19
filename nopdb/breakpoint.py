@@ -76,10 +76,14 @@ class Breakpoint(NoPdbContextManager):
     ) -> None:
         """Schedule some code to be executed at the breakpoint.
 
+        The code will be executed in the breakpoint's scope. Any changes to local
+        variables (including newly defined variables) will be preserved in the local
+        scope; note that this feature is somewhat experimental and may not work with
+        Python implementations other than CPython and PyPy.
+
         Args:
             code (str, bytes or ~types.CodeType): Python source code to be executed in
-                the breakpoint's scope. Any changes to local variables (including
-                newly defined variables) will be preserved in the local scope.
+                the breakpoint's scope.
             variables (~typing.Dict[str, ~typing.Any], optional): External variables
                 for the code. These may not conflict with local variables and will
                 *not* be preserved in the local scope.

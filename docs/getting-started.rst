@@ -47,9 +47,9 @@ will be made from there:
     >>> call.locals  # doctest: +SKIP
     {'x': 1, 'y': 1, 'z': 2}
     >>> call.print_stack()  # doctest: +SKIP
-    File "<stdin>", line 2, in <module>
-    File "<stdin>", line 2, in g
-    File "<stdin>", line 1, in f
+      File "<stdin>", line 2, in <module>
+      File "<stdin>", line 2, in g
+      File "<stdin>", line 1, in f
 
 .. doctest::
     :hide:
@@ -133,6 +133,8 @@ Not only can we capture values, we can also modify them!
     >>> z_after
     [3]
 
+.. Warning:: Assigning to local variables is somewhat experimental and only supported
+    under CPython and PyPy.
 
 The :class:`NoPdb` class
 ------------------------
@@ -142,7 +144,7 @@ be used as a context manager, or started and stopped explicitly using the
 :meth:`~NoPdb.start` and :meth:`~NoPdb.stop` methods. This can be useful if we want to
 set multiple breakpoints or call captures in a single context:
 
-.. doctest::
+.. testcode::
 
     with nopdb.NoPdb():
         f_call = nopdb.capture_call(f)
@@ -151,9 +153,19 @@ set multiple breakpoints or call captures in a single context:
 
         g(1)
 
+.. doctest::
+    :hide:
+
+    >>> f_call
+    CallCapture(name='f', args=OrderedDict(x=1, y=1), return_value=4)
+    >>> g_call
+    CallCapture(name='g', args=OrderedDict(x=1), return_value=4)
+    >>> z_val
+    [2]
+
 Or alternatively:
 
-.. doctest::
+.. testcode::
 
     dbg = nopdb.NoPdb()
     f_call = dbg.capture_call(f)
@@ -163,3 +175,17 @@ Or alternatively:
     dbg.start()
     g(1)
     dbg.stop()
+
+.. doctest::
+    :hide:
+
+    >>> f_call
+    CallCapture(name='f', args=OrderedDict(x=1, y=1), return_value=4)
+    >>> g_call
+    CallCapture(name='g', args=OrderedDict(x=1), return_value=4)
+    >>> z_val
+    [2]
+
+.. Note:: While it is possible to create multiple :class:`NoPdb` objects, they cannot
+    be active simultaneously. Starting a new instance will pause the currently active
+    instance.

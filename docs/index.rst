@@ -14,19 +14,22 @@ NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This mean
   * **execute arbitrary code**, including modifying local variables
   * **enter an interactive debugger** like `pdb`
 
+.. Note:: NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
+  as long as it has :func:`sys.settrace()`.
+
 Contents
 --------
 
 .. toctree::
-   :hidden:
-   :maxdepth: 2
-   :caption: Contents
+  :hidden:
+  :maxdepth: 2
+  :caption: Contents
 
-   Introduction <self>
+  Introduction <self>
 
 .. toctree::
-   :includehidden:
-   :maxdepth: 2
+  :includehidden:
+  :maxdepth: 2
 
-   getting-started
-   api
+  getting-started
+  api
