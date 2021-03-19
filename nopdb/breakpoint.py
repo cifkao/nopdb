@@ -4,14 +4,17 @@ import functools
 import pdb
 import sys
 from types import CodeType, FrameType
-from typing import Any, Callable, List, Optional, Dict, Type, Union
+from typing import Any, Callable, List, Optional, Dict, Type, Union, TYPE_CHECKING
 
-from .common import FriendlyContextManager
+from .common import NoPdbContextManager
 from .nice_debugger import get_nice_debugger
 from .scope import Scope
 
+if TYPE_CHECKING:
+    from .nopdb import NoPdb
 
-class Breakpoint(FriendlyContextManager):
+
+class Breakpoint(NoPdbContextManager):
     """A breakpoint that executes scheduled actions when hit.
 
     Breakpoints are typically created with :func:`nopdb.breakpoint`. The breakpoint
@@ -20,11 +23,14 @@ class Breakpoint(FriendlyContextManager):
 
     def __init__(
         self,
+        nopdb: "NoPdb",
         scope: Scope,
         line: Optional[int] = None,
         cond: Optional[Union[str, bytes, CodeType]] = None,
     ):
-        FriendlyContextManager.__init__(self)
+        NoPdbContextManager.__init__(
+            self, nopdb=nopdb, scope=scope, events=["call", "line"]
+        )
         if line is None and scope.function is None:
             raise TypeError("A line number must be given if no function is specified")
         if all(x is None for x in [scope.module, scope.file, scope.function]):

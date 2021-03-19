@@ -1,5 +1,4 @@
 import collections
-import contextlib
 import functools
 from os import PathLike
 import pathlib
@@ -18,23 +17,18 @@ from typing import (
 import warnings
 
 from .call_capture import CallCapture, CallListCapture
-from .common import TraceFunc, THREAD_LOCAL, suspend, resume, is_suspended
+from .common import Handle, TraceFunc, suspend, resume, is_suspended, THREAD_LOCAL
 from .scope import Scope
 from .breakpoint import Breakpoint
 
 
 __all__ = [
-    "Handle",
     "NoPdb",
     "breakpoint",
     "capture_call",
     "capture_calls",
     "get_nopdb",
 ]
-
-
-class Handle:
-    pass
 
 
 class NoPdb:
@@ -83,8 +77,7 @@ class NoPdb:
             )
         self._started = False
 
-    @contextlib.contextmanager
-    def _as_started(self):
+    def _ensure_started(self):
         started = self._started
         if started and getattr(sys.gettrace(), "__self__", None) is not self:
             raise RuntimeError(
@@ -93,11 +86,6 @@ class NoPdb:
             )
         if not started:
             self.start()
-        try:
-            yield
-        finally:
-            if not started:
-                self.stop()
 
     def __enter__(self) -> "NoPdb":
         self.start()
@@ -210,17 +198,9 @@ class NoPdb:
         """
         suspend()
         try:
-            capture = CallCapture()
-            capture._exit_stack.enter_context(self._as_started())
-            handle = self.add_callback(
-                Scope(function, module, file, unwrap=unwrap),
-                capture._callback,
-                ["call", "return"],
+            return CallCapture(
+                nopdb=self, scope=Scope(function, module, file, unwrap=unwrap)
             )
-            capture._exit_stack.callback(
-                functools.partial(self.remove_callback, handle=handle)
-            )
-            return capture
         finally:
             resume()
 
@@ -263,17 +243,9 @@ class NoPdb:
         """
         suspend()
         try:
-            capture = CallListCapture()
-            capture._exit_stack.enter_context(self._as_started())
-            handle = self.add_callback(
-                Scope(function, module, file, unwrap=unwrap),
-                capture._callback,
-                ["call", "return"],
+            return CallListCapture(
+                nopdb=self, scope=Scope(function, module, file, unwrap=unwrap)
             )
-            capture._exit_stack.callback(
-                functools.partial(self.remove_callback, handle=handle)
-            )
-            return capture
         finally:
             resume()
 
@@ -305,9 +277,12 @@ class NoPdb:
            with nopdb.breakpoint(function=f, line=3) as bp:
                x = bp.eval("x")             # Schedule an expression
                type_y = bp.eval("type(y)")  # Another one
-               # Run some code that calls f...
+               bp.exec("print(y)")          # Schedule a print statement
 
-           print(x, type_y)  # Retrieve the values
+               # Now run some code that calls f
+               # ...
+
+           print(x, type_y)  # Retrieve the recorded values
 
         Args:
             function (~typing.Callable or str, optional): A Python callable or the name
@@ -336,14 +311,12 @@ class NoPdb:
         """
         suspend()
         try:
-            scope = Scope(function, module, file, unwrap=unwrap)
-            bp = Breakpoint(scope=scope, line=line, cond=cond)
-            bp._exit_stack.enter_context(self._as_started())
-            handle = self.add_callback(scope, bp._callback, ["call", "line"])
-            bp._exit_stack.callback(
-                functools.partial(self.remove_callback, handle=handle)
+            return Breakpoint(
+                nopdb=self,
+                scope=Scope(function, module, file, unwrap=unwrap),
+                line=line,
+                cond=cond,
             )
-            return bp
         finally:
             resume()
 

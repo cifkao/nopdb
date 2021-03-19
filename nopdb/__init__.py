@@ -2,5 +2,5 @@
 from .nopdb import *
 from .breakpoint import Breakpoint
 from .call_capture import CallCapture, CallListCapture, CallInfo
-from .common import TraceFunc
+from .common import Handle, TraceFunc
 from .scope import Scope

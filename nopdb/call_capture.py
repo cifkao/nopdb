@@ -3,9 +3,13 @@ import collections
 import inspect
 import traceback
 from types import FrameType
-from typing import Any, List, Optional, Dict
+from typing import Any, List, Optional, Dict, TYPE_CHECKING
 
-from .common import FriendlyContextManager
+from .common import NoPdbContextManager
+
+if TYPE_CHECKING:
+    from .nopdb import NoPdb
+    from .scope import Scope
 
 
 class CallInfo:
@@ -84,20 +88,24 @@ class BaseCallCapture:
         pass
 
 
-class CallCapture(BaseCallCapture, FriendlyContextManager, CallInfo):
-    def __init__(self):
+class CallCapture(BaseCallCapture, NoPdbContextManager, CallInfo):
+    def __init__(self, nopdb: "NoPdb", scope: "Scope"):
         BaseCallCapture.__init__(self)
-        FriendlyContextManager.__init__(self)
+        NoPdbContextManager.__init__(
+            self, nopdb=nopdb, scope=scope, events=["call", "return"]
+        )
         CallInfo.__init__(self)
 
     def _update_result(self, result: CallInfo) -> None:
         self.__dict__.update(result.__dict__)
 
 
-class CallListCapture(BaseCallCapture, FriendlyContextManager, List[CallInfo]):
-    def __init__(self):
+class CallListCapture(BaseCallCapture, NoPdbContextManager, List[CallInfo]):
+    def __init__(self, nopdb: "NoPdb", scope: "Scope"):
         BaseCallCapture.__init__(self)
-        FriendlyContextManager.__init__(self)
+        NoPdbContextManager.__init__(
+            self, nopdb=nopdb, scope=scope, events=["call", "return"]
+        )
         List.__init__(self)
 
     def _update_result(self, result: CallInfo) -> None:
