@@ -60,7 +60,6 @@ To capture *all* the calls, we can use :func:`capture_calls` (in the plural):
     >>> with nopdb.capture_calls(function=f) as calls:
     ...     g(1)
     ...     g(42)
-    ...
     4
     168
     >>> calls
@@ -72,17 +71,88 @@ specifying which function(s) should be considered:
 
 * We may pass a function or its name, i.e. :code:`capture_calls(f)` or
   :code:`capture_calls('f')`.
+* Passing a method bound to an instance, as in :code:`capture_calls(obj.f)`,
+  will work as expected: only calls invoked on that particular instance (and
+  not other instances of the same class) will be captured.
 * A module, a filename or a full file path can be passed, e.g.
   :code:`capture_calls('f', module=mymodule)`
   or
   :code:`capture_calls('f', file='mymodule.py')`.
-* Both functions may be called without arguments, meaning that *all*
-  Python functions should be captured.
+* If no arguments are supplied, calls to *all* Python functions will be captured.
 
 
 Setting breakpoints
 -------------------
 
+Like conventional debuggers, NoPdb can set breakpoints. However, because NoPdb is a
+*non-interactive* debugger, its breakpoints do not actually stop the execution of the
+program. Instead, they allow executing actions scheduled in advance, such as
+evaluating expressions.
+
+To set a breakpoint, call the :func:`breakpoint` function. A breakpoint object
+is returned, allowing to schedule actions using its
+:meth:`~Breakpoint.eval`, :meth:`~Breakpoint.exec` and :meth:`~Breakpoint.debug`
+methods.
+
+Using the example from the previous section, let's try to use a breakpoint to capture
+the value of a variable:
+
+.. code-block:: python
+
+    >>> with nopdb.breakpoint(function=f, line=3) as bp:
+    ...     z_values = bp.eval('z')  # Get the value of z whenever the breakpoint is hit
+    ...
+    ...     g(1)
+    ...     g(42)
+    4
+    168
+    >>> z_values
+    [2, 84]
+
+Not only can we capture values, we can also modify them!
+
+.. code-block:: python
+
+    >>> with nopdb.breakpoint(function=f, line=3) as bp:
+    ...     # Get the value of z, then increment it, then get the new value
+    ...     z_before = bp.eval('z')
+    ...     bp.exec('z += 1')
+    ...     z_after = bp.eval('z')
+    ...
+    ...     g(1)  # This would normally return 4
+    6
+    >>> z_before
+    [2]
+    >>> z_after
+    [3]
+
 
 The :class:`NoPdb` class
 ------------------------
+
+Another way to use NoPdb is by creating a :class:`NoPdb` object. The object can either
+be used as a context manager, or started and stopped explicitly using the
+:meth:`~NoPdb.start` and :meth:`~NoPdb.stop` methods. This can be useful if we want to
+set multiple breakpoints or call captures in a single context:
+
+.. code-block:: python
+
+    with nopdb.NoPdb():
+        f_call = nopdb.capture_call(f)
+        g_call = nopdb.capture_call(g)
+        z_val = nopdb.breakpoint(function=f, line=3).eval('z')
+
+        g(1)
+
+Or alternatively:
+
+.. code-block:: python
+
+    dbg = nopdb.NoPdb()
+    f_call = dbg.capture_call(f)
+    g_call = dbg.capture_call(g)
+    z_val = dbg.breakpoint(function=f, line=3).eval('z')
+
+    dbg.start()
+    g(1)
+    dbg.stop()
