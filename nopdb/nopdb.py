@@ -251,8 +251,8 @@ class NoPdb:
 
     def breakpoint(
         self,
-        *,
         function: Optional[Union[Callable, str]] = None,
+        *,
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
         line: Optional[int] = None,
