@@ -64,7 +64,7 @@ To capture *all* the calls, we can use :func:`capture_calls` (in the plural):
 .. doctest::
     :options: +NORMALIZE_WHITESPACE
 
-    >>> with nopdb.capture_calls(function=f) as calls:
+    >>> with nopdb.capture_calls(f) as calls:
     ...     g(1)
     ...     g(42)
     4
@@ -106,7 +106,7 @@ the value of a variable:
 
 .. doctest::
 
-    >>> with nopdb.breakpoint(function=f, line=3) as bp:
+    >>> with nopdb.breakpoint(f, line=3) as bp:
     ...     z_values = bp.eval('z')  # Get the value of z whenever the breakpoint is hit
     ...
     ...     g(1)
@@ -120,7 +120,7 @@ Not only can we capture values, we can also modify them!
 
 .. doctest::
 
-    >>> with nopdb.breakpoint(function=f, line=3) as bp:
+    >>> with nopdb.breakpoint(f, line=3) as bp:
     ...     # Get the value of z, then increment it, then get the new value
     ...     z_before = bp.eval('z')
     ...     bp.exec('z += 1')
@@ -149,7 +149,7 @@ set multiple breakpoints or call captures in a single context:
     with nopdb.NoPdb():
         f_call = nopdb.capture_call(f)
         g_call = nopdb.capture_call(g)
-        z_val = nopdb.breakpoint(function=f, line=3).eval('z')
+        z_val = nopdb.breakpoint(f, line=3).eval('z')
 
         g(1)
 
@@ -170,7 +170,7 @@ Or alternatively:
     dbg = nopdb.NoPdb()
     f_call = dbg.capture_call(f)
     g_call = dbg.capture_call(g)
-    z_val = dbg.breakpoint(function=f, line=3).eval('z')
+    z_val = dbg.breakpoint(f, line=3).eval('z')
 
     dbg.start()
     g(1)
