@@ -134,7 +134,7 @@ Not only can we capture values, we can also modify them!
     [3]
 
 .. Warning:: Assigning to local variables is somewhat experimental and only supported
-    under CPython and PyPy.
+    under CPython (the most common Python implementation) and PyPy.
 
 The :class:`NoPdb` class
 ------------------------
