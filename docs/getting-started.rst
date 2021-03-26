@@ -116,6 +116,26 @@ the value of a variable:
     >>> z_values
     [2, 84]
 
+.. Note:: There are multiple ways to specify the breakpoint location (see the
+    reference for :func:`breakpoint` for a detailed description of all the
+    parameters). Like in a classical debugger, we can pass a :code:`filename` and a
+    :code:`line` number. Like above, we can also pass a :code:`function` (or its name).
+    Note that lines are always counted from the beginning of the file or notebook cell,
+    and the breakpoint will be triggered *just before* executing the given line.
+
+    A more convenient option is to provide the *source code* of the desired line
+    (ignoring surrounding whitespace), for example:
+
+    .. code-block:: python
+
+        with nopdb.breakpoint(f, line='return 2 * z') as bp:
+            ...
+
+    :code:`line` can also be omitted, in which case the breakpoint will be triggered
+    every time the given function is called.
+
+    A conditional breakpoint can be set using the :code:`cond` parameter.
+
 Not only can we capture values, we can also modify them!
 
 .. doctest::

@@ -255,7 +255,7 @@ class NoPdb:
         *,
         module: Optional[ModuleType] = None,
         file: Optional[Union[str, PathLike]] = None,
-        line: Optional[int] = None,
+        line: Optional[Union[int, str]] = None,
         cond: Optional[Union[str, bytes, CodeType]] = None,
         unwrap: bool = True
     ) -> Breakpoint:
@@ -269,12 +269,12 @@ class NoPdb:
         :meth:`Breakpoint.debug`.
 
         At least a function, a module or a file must be specified. If no function is
-        given, a line number is also required.
+        given, a line is also required.
 
         Example::
 
-           # Stop at line 3 of the file or notebook cell where f is defined
-           with nopdb.breakpoint(function=f, line=3) as bp:
+           # Stop at the line in f that says "return y"
+           with nopdb.breakpoint(function=f, line="return y") as bp:
                x = bp.eval("x")             # Schedule an expression
                type_y = bp.eval("type(y)")  # Another one
                bp.exec("print(y)")          # Schedule a print statement
@@ -293,11 +293,19 @@ class NoPdb:
                 If a string is passed, it will be used as a glob-style pattern for
                 :meth:`pathlib.PurePath.match`. If a path-like object is passed, it
                 will be resolved to a canonical path and checked for an exact match.
-            line (int, optional): The line number at which to break, counted from the
-                beginning of the file. If `None` and a `function` is passed, the
-                breakpoint will be triggered as soon as the function is called. If no
-                `function` is passed, `line` is required. Note that unlike in `pdb`,
-                the breakpoint will only get triggered by this exact line number.
+            line (int or str, optional): The line at which to break. Either of the
+                following:
+
+                * The line number, counted from the beginning of the file.
+                * The source code of the line. The code needs to match exactly, except
+                  for leading and trailing whitespace.
+                * `None`; in this case, a `function` must be passed, and the breakpoint
+                  will be triggered every time the function is called.
+
+                Note that unlike in `pdb`, the breakpoint will only get triggered by
+                the exact given line. This means that some lines will not work as
+                breakpoints, e.g. if they are part of a multiline statement or do not
+                contain any code to execute.
             cond (str, bytes or ~types.CodeType, optional): A condition to evaluate. If
                 given, the breakpoint will only be triggered when the condition
                 evaluates to true.

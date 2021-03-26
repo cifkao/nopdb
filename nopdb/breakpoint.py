@@ -1,5 +1,6 @@
 import bdb
 import functools
+import linecache
 import pdb
 import sys
 from types import CodeType, FrameType
@@ -25,14 +26,14 @@ class Breakpoint(NoPdbContextManager):
         self,
         nopdb: "NoPdb",
         scope: Scope,
-        line: Optional[int] = None,
+        line: Optional[Union[int, str]] = None,
         cond: Optional[Union[str, bytes, CodeType]] = None,
     ):
         NoPdbContextManager.__init__(
             self, nopdb=nopdb, scope=scope, events=["call", "line"]
         )
         if line is None and scope.function is None:
-            raise TypeError("A line number must be given if no function is specified")
+            raise TypeError("A line must be given if no function is specified")
         if all(x is None for x in [scope.module, scope.file, scope.function]):
             raise TypeError("A module, file or function must be specified")
 
@@ -161,12 +162,19 @@ class Breakpoint(NoPdbContextManager):
         debugger.trace_dispatch(frame, event, arg)
 
     def _callback(self, frame: FrameType, event: str, arg: Any) -> None:
-        # If line is None, we break at the first line...
-        if self.line is None and frame.f_lineno != frame.f_code.co_firstlineno:
+        # If line is None, break when the function is called
+        if self.line is None and event == "call":
             return
-        # ...otherwise we break at the given line
-        if self.line is not None and frame.f_lineno != self.line:
+        # If line is an int, check the line number
+        if isinstance(self.line, int) and frame.f_lineno != self.line:
             return
+        # If line is a string, match the line text
+        if isinstance(self.line, str):
+            line_text = linecache.getline(
+                frame.f_code.co_filename, frame.f_lineno, frame.f_globals
+            )
+            if self.line.strip() != line_text.strip():
+                return
         # Evaluate condition if given
         if self.cond is not None and not eval(
             self.cond, frame.f_globals, frame.f_locals
