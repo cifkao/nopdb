@@ -73,6 +73,18 @@ is returned, allowing to schedule actions using its methods such as
 
    print(x, type_y)  # Retrieve the captured values
 
+There are other ways to specify the breakpoint location. For example:
+
+.. code-block:: python
+
+   # Break at any line with the given source code in the given file
+   with nopdb.breakpoint(file="pathlib.py", line="return obj") as bp:
+       ...
+
+   # Break as soon as any function with the given name is called
+   with nopdb.breakpoint(function="myfunc") as bp:
+       ...
+
 Not only can we capture values, we can also modify them!
 
 .. code-block:: python
