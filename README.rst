@@ -20,6 +20,11 @@ as long as it has :code:`sys.settrace()`.
 
 **Note:** This project is in its early development stage. Contributions and improvement ideas are welcome.
 
+Installation
+------------
+
+:code:`pip install nopdb`
+
 Capturing function calls
 ------------------------
 
