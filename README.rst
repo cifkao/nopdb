@@ -1,5 +1,6 @@
 NoPdb: Non-interactive Python Debugger
 ======================================
+|pypi-package| |docs-status| |test-status| |lint-status|
 
 NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This means it gives you access to
 **debugger-like superpowers** directly from your code. With NoPdb, you can:
@@ -103,3 +104,16 @@ Not only can we capture values, we can also modify them!
     [2]
     >>> x_after
     [3]
+
+.. |pypi-package| image:: https://badge.fury.io/py/nopdb.svg?
+   :target: https://pypi.org/project/nopdb/
+   :alt: PyPI Package
+.. |docs-status| image:: https://readthedocs.org/projects/nopdb/badge/?version=latest
+   :target: https://nopdb.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+.. |test-status| image:: https://github.com/cifkao/nopdb/actions/workflows/test.yml/badge.svg
+   :target: https://github.com/cifkao/nopdb/actions/workflows/test.yml
+   :alt: Lint Status
+.. |lint-status| image:: https://github.com/cifkao/nopdb/actions/workflows/lint.yml/badge.svg
+   :target: https://github.com/cifkao/nopdb/actions/workflows/lint.yml
+   :alt: Lint Status
