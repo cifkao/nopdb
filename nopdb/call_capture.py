@@ -70,7 +70,7 @@ class BaseCallCapture:
             result.args = collections.OrderedDict(
                 [
                     (name, arg_info.locals[name])
-                    for name in arg_info.args
+                    for name in [*arg_info.args, arg_info.varargs, arg_info.keywords]
                     if name in arg_info.locals
                 ]
             )
