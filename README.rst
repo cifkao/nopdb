@@ -18,12 +18,10 @@ use it to visualize Transformer attention in PyTorch.
 NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
 as long as it has :code:`sys.settrace()`.
 
+* **Installation:** :code:`pip install nopdb`
+* **Docs:** https://nopdb.readthedocs.io/
+
 **Note:** This project is in its early development stage. Contributions and improvement ideas are welcome.
-
-Installation
-------------
-
-:code:`pip install nopdb`
 
 Capturing function calls
 ------------------------
