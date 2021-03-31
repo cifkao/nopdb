@@ -2,6 +2,9 @@ NoPdb: Non-interactive Python Debugger
 ======================================
 |pypi-package| |docs-status| |test-status| |lint-status|
 
+* **Installation:** :code:`pip install nopdb`
+* **Docs:** https://nopdb.readthedocs.io/
+
 NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This means it gives you access to
 **debugger-like superpowers** directly from your code. With NoPdb, you can:
 
@@ -17,9 +20,6 @@ use it to visualize Transformer attention in PyTorch.
 
 NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
 as long as it has :code:`sys.settrace()`.
-
-* **Installation:** :code:`pip install nopdb`
-* **Docs:** https://nopdb.readthedocs.io/
 
 **Note:** This project is in its early development stage. Contributions and improvement ideas are welcome.
 
