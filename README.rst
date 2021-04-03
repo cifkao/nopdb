@@ -113,7 +113,7 @@ Limitations
 -----------
 
 * Like Pdb, NoPdb only works with pure-Python functions. Calls to built-ins and C extensions cannot be captured. This also applies to ML frameworks that compile models into static graphs; for NoPdb to work, this feature needs to be disabled, e.g.\ in TensorFlow, eager execution needs to be used.
-* Local variable assignment in `Breakpoint.exec()` is only supported under CPython and PyPy.
+* Local variable assignment in :code:`Breakpoint.exec()` is only supported under CPython and PyPy.
 
 .. |pypi-package| image:: https://badge.fury.io/py/nopdb.svg?
    :target: https://pypi.org/project/nopdb/
