@@ -15,8 +15,9 @@ NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This mean
   * **execute arbitrary code**, including modifying local variables
   * **enter an interactive debugger** like `pdb`
 
-NoPdb is also a convenient tool for inspecting **machine learning model internals**. For example, `this notebook <https://colab.research.google.com/github/cifkao/nopdb/blob/main/docs/pytorch_tutorial.ipynb>`_ shows how to
-use it to visualize Transformer attention in PyTorch.
+NoPdb is also a convenient tool for inspecting **machine learning model internals**. For example,
+`this notebook <https://colab.research.google.com/github/cifkao/nopdb/blob/main/docs/pytorch_tutorial.ipynb>`_ 
+shows how to use it to visualize Transformer attention in PyTorch.
 
 NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
 as long as it has :code:`sys.settrace()`.
@@ -107,6 +108,12 @@ Not only can we capture values, we can also modify them!
     [2]
     >>> x_after
     [3]
+
+Limitations
+-----------
+
+* Like Pdb, NoPdb only works with pure-Python functions. Calls to built-ins and C extensions cannot be captured. This also applies to ML frameworks that compile models into static graphs; for NoPdb to work, this feature needs to be disabled, e.g.\ in TensorFlow, eager execution needs to be used.
+* Local variable assignment in `Breakpoint.exec()` is only supported under CPython and PyPy.
 
 .. |pypi-package| image:: https://badge.fury.io/py/nopdb.svg?
    :target: https://pypi.org/project/nopdb/
