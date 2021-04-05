@@ -120,7 +120,7 @@ Functionalities that do not exist, but could be added in the future:
 Limitations
 -----------
 
-* Like Pdb, NoPdb only works with pure-Python functions. Calls to built-ins and C extensions cannot be captured. This also applies to ML frameworks that compile models into static graphs; for NoPdb to work, this feature needs to be disabled, e.g. in TensorFlow, eager execution needs to be used.
+* Like Pdb, NoPdb only works with pure-Python functions. Calls to built-ins and C extensions cannot be captured. This also applies to ML frameworks that compile models into static graphs; for NoPdb to work, this feature needs to be disabled, e.g. with :code:`tf.config.run_functions_eagerly(True)` in TensorFlow and with the :code:`jax.disable_jit()` context manager in JAX.
 * Local variable assignment in :code:`Breakpoint.exec()` is only supported under CPython and PyPy.
 
 .. |pypi-package| image:: https://badge.fury.io/py/nopdb.svg?
