@@ -163,7 +163,7 @@ class Breakpoint(NoPdbContextManager):
 
     def _callback(self, frame: FrameType, event: str, arg: Any) -> None:
         # If line is None, break when the function is called
-        if self.line is None and event == "call":
+        if self.line is None and event != "call":
             return
         # If line is an int, check the line number
         if isinstance(self.line, int) and frame.f_lineno != self.line:
