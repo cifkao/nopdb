@@ -1,7 +1,7 @@
 import abc
 import threading
 from types import FrameType
-from typing import Any, Callable, List, TypeVar, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, TypeVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .nopdb import NoPdb
@@ -46,20 +46,33 @@ class NoPdbContextManager(abc.ABC):
         self._events = events
 
         self._was_started = False
-        self._handle = nopdb.add_callback(self._scope, self._callback, self._events)
+        self._handle = None  # type: Optional[Handle]
+        self.enable()
 
     @abc.abstractmethod
     def _callback(self, frame: FrameType, event: str, arg: Any) -> None:
         pass
 
+    def enable(self) -> None:
+        if not self._handle:
+            self._handle = self._nopdb.add_callback(
+                self._scope, self._callback, self._events
+            )
+
+    def disable(self) -> None:
+        if self._handle:
+            self._nopdb.remove_callback(self._handle)
+            self._handle = None
+
     def __enter__(self: TNoPdbContextManager) -> TNoPdbContextManager:
         self._was_started = self._nopdb.started
         self._nopdb._ensure_started()
+        self.enable()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         try:
-            self._nopdb.remove_callback(self._handle)
+            self.disable()
         finally:
             if self._nopdb.started and not self._was_started:
                 self._nopdb.stop()
