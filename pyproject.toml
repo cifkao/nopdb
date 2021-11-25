@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nopdb"
-version = "0.1.0"
+version = "0.2.0"
 description = "Non-interactive Python debugger"
 authors = ["Ondřej Cífka <cifkao@gmail.com>"]
 license = "BSD-3-Clause"
