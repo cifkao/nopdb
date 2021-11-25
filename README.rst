@@ -116,7 +116,6 @@ Functionalities that do not exist, but could be added in the future:
 
 * :code:`Breakpoint.callback()` for calling a given callback function, passing information about the current frame as an argument.
 * :code:`Breakpoint.jump()` for jumping to a different line in the same function.
-* A way to disable breakpoints.
 
 Limitations
 -----------
