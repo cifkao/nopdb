@@ -16,7 +16,7 @@ NoPdb is a **programmatic** (non-interactive) **debugger** for Python. This mean
   * **enter an interactive debugger** like `pdb`
 
 NoPdb is also a convenient tool for inspecting **machine learning model internals**. For example,
-`this notebook <https://colab.research.google.com/github/cifkao/nopdb/blob/main/docs/pytorch_tutorial.ipynb>`_, `this post on Towards Data Science <https://towardsdatascience.com/dissecting-ml-models-with-nopdb-6ff4651fb131>`_ and `this SciPy 2022 poster <https://mybinder.org/v2/gh/cifkao/scipy2022-nopdb/main?labpath=nopdb_poster.ipynb>`_
+`this notebook <https://colab.research.google.com/github/cifkao/nopdb/blob/main/docs/pytorch_tutorial.ipynb>`_, `this post on Towards Data Science <https://towardsdatascience.com/dissecting-ml-models-with-nopdb-6ff4651fb131>`_ and `this notebook <https://mybinder.org/v2/gh/cifkao/scipy2022-nopdb/main?labpath=nopdb_poster.ipynb>`_ (SciPy 2022 virtual poster)
 show how to use it to visualize Transformer attention in PyTorch.
 
 NoPdb should run at least under CPython and PyPy. Most features should work under any implementation
